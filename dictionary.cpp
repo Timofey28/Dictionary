@@ -1005,6 +1005,7 @@ void Dictionary::findAWord(bool findAmongAll)
             }
         }
         else if(count(lettersEntered.begin(), lettersEntered.end(), 0) == lettersEntered.size()) { // russian
+            wordUpper = "";
             for(auto it = dictToSearchIn.begin(); it != dictToSearchIn.end(); ++it) {
                 if(_kbhit()) continue;
                 vector<string> meaning = it->second;
@@ -1019,7 +1020,7 @@ void Dictionary::findAWord(bool findAmongAll)
                         no_words = 0;
                         string key = it->first;
                         wordsAmountUpper++;
-                        wordUpper = key;
+                        if(wordUpper == "") wordUpper = key;
                         for(int j = 0; j < key.size(); ++j)
                             if(key[j] == '_') key[j] = ' ';
                         setColor(11);
