@@ -349,15 +349,17 @@ string Dictionary::modifyString(string s, int width, int indent) // indent - рас
 
 void Dictionary::printAWord(string &word, int spaces_amount, string toUpper, int color, bool from_all_dict)
 { // само слово, длина отступа не считая первых 8 пробелов (используется только в тесте)
-    int width; // string toUpper - какую часть слова надо подкрасить (используется только в поиске)
-    HANDLE hConsole; // color - цвет слова; from_all_dict - глобальный/локальный поиск
+// string toUpper - какую часть слова надо подкрасить (используется только в поиске)
+// color - цвет слова; from_all_dict - глобальный/локальный поиск
+    int width;
+    HANDLE hConsole;
     if(hConsole = GetStdHandle(-12)) {
         CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
         if(GetConsoleScreenBufferInfo(hConsole, &consoleInfo))
             width = consoleInfo.srWindow.Right - consoleInfo.srWindow.Left + 1;
-        else exit(2);
+        else exit(-1);
     }
-    else exit(2);
+    else exit(-1);
     width -= 16;
 
     map<string, vector<string>> temp(dict);
@@ -1559,8 +1561,15 @@ void Dictionary::foldersHandler()
     }
     pathToDemonstration(output_before_user_request);
     if(output_before_user_request == "all/> ") output_before_user_request = "ALL/> ";
+    bool needInstructions = 1;
+    string command = "";
     while(1) {
         if(choice.substr(0, 6) == "create") { // создает папку
+            if(choice == "create") {
+                command = choice;
+                goto thatsall;
+            }
+            needInstructions = 0;
             string newFolderName = choice.substr(6);
             getRidOfSpaces(newFolderName);
             if(newFolderName == "") goto thatsall;
@@ -1586,6 +1595,11 @@ void Dictionary::foldersHandler()
             }
         }
         else if(choice.substr(0, 6) == "delete") { // удаляет папку (словари в ней перемещаются в общую область видимости)
+            if(choice == "delete") {
+                command = choice;
+                goto thatsall;
+            }
+            needInstructions = 0;
             bool deleteFolderIAmInRightNow;
             string folderToDelete = choice.substr(6);
             getRidOfSpaces(folderToDelete);
@@ -1700,6 +1714,11 @@ void Dictionary::foldersHandler()
             }
         }
         else if(choice.substr(0, 6) == "add to") { // добавляет текущий словарь в введенную папку
+            if(choice == "add to") {
+                command = choice;
+                goto thatsall;
+            }
+            needInstructions = 0;
             if(folder != "" || file == "Dictionaries/all.txt") {
                 cout << '\a';
                 setColor(4);
@@ -1761,6 +1780,7 @@ void Dictionary::foldersHandler()
             }
         }
         else if(choice.substr(0, 6) == "remove") { // перемещаем текущий словарь из папки в общую область видимости
+            needInstructions = 0;
             if(folder == "" || file.substr(13) == folder + "all.txt") {
                 if(!out) {
                     setColor(4);
@@ -1788,6 +1808,7 @@ void Dictionary::foldersHandler()
             output_before_user_request.erase(0, output_before_user_request.find(" -> ") + 4);
         }
         else if(choice.substr(0, 4) == "show") {
+            needInstructions = 0;
             const int markeringColor = 6;
             string folderName = choice.substr(4);
             getRidOfSpaces(folderName);
@@ -1908,20 +1929,118 @@ void Dictionary::foldersHandler()
             if(!out) cout << "\n\n";
         }
         else if(choice == "cls") {
+            needInstructions = 0;
             system("cls");
             cout << "\n";
         }
         else if(choice == "exit") out = 1;
         thatsall:
         if(out) break;
-        // сюда дописать что выводить если неправильный запрос
+        if(needInstructions && choice != "") foldersHandlerInstructions(command);
         setColor(7);
         cout << output_before_user_request;
         setColor(15);
+        needInstructions = 1;
+        command = "";
         getline(cin, choice);
         getRidOfSpaces(choice);
         for(int i = 0; i < choice.size(); ++i)
         choice[i] = tolower(choice[i]);
+    }
+}
+
+void Dictionary::foldersHandlerInstructions(string command)
+{
+    string output;
+    int width;
+    HANDLE hConsole;
+    if(hConsole = GetStdHandle(-12)) {
+        CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
+        if(GetConsoleScreenBufferInfo(hConsole, &consoleInfo))
+            width = consoleInfo.srWindow.Right - consoleInfo.srWindow.Left + 1;
+        else exit(-1);
+    }
+    else exit(-1);
+    width -= 12;
+    int instructionColor = 6,
+        descriptionColor = 7,
+        folderNameColor = 3;
+
+    if(command == "create") {
+        setColor(instructionColor);
+        cout << "\n    create ";
+        setColor(folderNameColor);
+        cout << "<folder name>";
+        setColor(descriptionColor);
+        cout << modifyString(" - создает новую папку", width, 19) << "\n\n";
+    }
+    else if(command == "delete") {
+        setColor(instructionColor);
+        cout << "\n    delete ";
+        setColor(folderNameColor);
+        cout << "<folder name>";
+        setColor(descriptionColor);
+        cout << modifyString(" - удаляет существующую папку и перемещает все находящиеся в ней словари в общую область видимости", width, 19) << "\n\n";
+    }
+    else if(command == "add to") {
+        setColor(instructionColor);
+        cout << "\n    add to ";
+        setColor(folderNameColor);
+        cout << "<folder name>";
+        setColor(descriptionColor);
+        cout << modifyString(" - добавляет текущий словарь в введенную папку", width, 19) << "\n\n";
+    }
+    else {
+        setColor(instructionColor);
+        cout << "\n    create ";
+        setColor(folderNameColor);
+        cout << "<folder name>";
+        setColor(descriptionColor);
+        cout << modifyString(" - создать новую папку", width, 19);
+
+        setColor(instructionColor);
+        cout << "\n    delete ";
+        setColor(folderNameColor);
+        cout << "<folder name>";
+        setColor(descriptionColor);
+        cout << modifyString(" - удалить существующую папку с перемещением всех находящихся в ней словарей в общую область видимости", width, 19);
+
+        setColor(instructionColor);
+        cout << "\n    add to ";
+        setColor(folderNameColor);
+        cout << "<folder name>";
+        setColor(descriptionColor);
+        cout << modifyString(" - добавить текущий словарь в введенную папку", width, 19);
+
+        setColor(instructionColor);
+        cout << "\n    remove";
+        setColor(descriptionColor);
+        cout << modifyString(" - переместить текущий словарь из папки в общую область видимости", width, 5);
+
+        setColor(instructionColor);
+        cout << "\n    show";
+        setColor(descriptionColor);
+        cout << modifyString(" - показать существующие папки с указанием в какой папке находится текущий словарь (если он не в общей области видимости)", width, 3);
+
+        setColor(instructionColor);
+        cout << "\n    show ";
+        setColor(folderNameColor);
+        cout << "<folder name>";
+        setColor(descriptionColor);
+        cout << modifyString(" - показать все словари введенной папки с указанием размера каждого словаря", width, 17);
+
+        setColor(instructionColor);
+        cout << "\n    cls";
+        setColor(descriptionColor);
+        cout << " - очистить экран";
+
+        setColor(instructionColor);
+        cout << "\n    exit";
+        setColor(descriptionColor);
+        cout << modifyString(" - вернуться в главное меню", width, 3);
+        cout << "\n\n";
+
+        setColor(15);
     }
 }
 

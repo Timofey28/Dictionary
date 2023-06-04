@@ -17,6 +17,7 @@ class Dictionary
     std::string modifyString(std::string s, int width, int indent);
     void getRidOfSpaces(std::string& word, char sym = ' ');
     int numLength(int num);
+    void foldersHandlerInstructions(std::string command);
 public:
     bool isInAll;
     Dictionary(std::string file_name);
