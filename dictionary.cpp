@@ -42,8 +42,8 @@ pair<char, char> Dictionary::enterWord(string& word, bool isAdding)
             }
             if((input[0] == 'f' || input[0] == 'а' || input[0] == 'F' || input[0] == 'А') && input[1] == '\0')
                 return {'f', '\0'};
-            if(isAdding && tolower(input[0] == 'b') && input[1] == 'b' || input[0] == 'и' && input[1] == 'и') {
-                last_word.pop();
+            if(tolower(input[0]) == 'b' && tolower(input[1]) == 'b' || tolower(input[0]) == 'и' && tolower(input[1]) == 'и') {
+                if(isAdding) last_word.pop();
                 return {'b', 'b'};
             }
             if(isAdding) goto off;
@@ -59,6 +59,8 @@ pair<char, char> Dictionary::enterWord(string& word, bool isAdding)
                 return {'f', input[1]};
             if((input[0] == 'r' || input[0] == 'к' || input[0] == 'R' || input[0] == 'К') && isdigit(input[1]))
                 return {'r', input[1]};
+            if(strlen(input) == 1 && input[0] == 'k' || input[0] == -85)
+                return {'k', '\0'};
         }
         off:
         string cppInput(input);
@@ -79,6 +81,7 @@ void Dictionary::print()
     }
     bool lineBreak = 0;
     for(auto it = dict.begin(); it != dict.end(); ++it) {
+        if(_kbhit() && _getch() == 27) return;
         string word = it->first;
         if(dict[word].size() == 1 && dict[word][0] == " ") {
             if(lineBreak) cout << "\n";
@@ -575,7 +578,7 @@ void Dictionary::add()
         return;
     }
     last_word.push(word);
-    do {
+    while(1) {
         system("cls");
         cout << "\n\tWrite a meaning: ";
         pair<char, char> p = enterWord(meaning, 1);
@@ -586,7 +589,7 @@ void Dictionary::add()
             if(del != dict.end()) dict.erase(del);
             return;
         }
-    }while(1);
+    }
 }
 
 void Dictionary::addSomeMeanings(string s = "")
@@ -594,9 +597,10 @@ void Dictionary::addSomeMeanings(string s = "")
     system("cls");
     string word, temp, meaning;
     char choice, c[200];
+    bool wordIsLocal = 1;
     if(!dict.size()) {
         cout << "\n\tNo words yet";
-        c[0] = _getch();
+        _getch();
         return;
     }
     if(s == "") {
@@ -628,6 +632,10 @@ void Dictionary::addSomeMeanings(string s = "")
     else word = s;
     for(int i = 0; i < word.size(); ++i)
         if(word[i] == ' ') word[i] = '_';
+    if(s != "" && dict.find(word) == dict.end()) { // если ты сюда пришел из determine() -> Wanna change? - yes -> и слова нет в текущем словаре
+        wordIsLocal = 0;
+        dict[word] = all_dict[word];
+    }
     system("cls");
     if(dict.find(word) == dict.end()) {
         if(file == "Dictionaries/all.txt") {
@@ -652,7 +660,7 @@ void Dictionary::addSomeMeanings(string s = "")
             printAWord(word);
             cout << "\n\n\tWrite a meaning: ";
             pair<char, char> p = enterWord(meaning);
-            if(p.first == 'r') {
+            if(p.first == 'r') { // выход/добавление слова и затем сразу выход
                 if(isdigit(p.second)) {
                     int k = min((int) dict[word].size(), p.second - 49);
                     if(k == dict[word].size()) {
@@ -673,12 +681,12 @@ void Dictionary::addSomeMeanings(string s = "")
                 }
                 break;
             }
-            if(p.first == 'd') {
+            if(p.first == 'd') { // удаление значения
                 if(p.second == '\0') dict[word].pop_back();
                 else dict[word].erase(dict[word].begin() + p.second - 49);
                 if(!dict[word].size()) dict[word].push_back(" ");
             }
-            else if(p.first == 'z') {
+            else if(p.first == 'z') { // замена значения
                 int index = (p.second == '\0') ? dict[word].size() - 1 : p.second - 49;
                 if(count(meaning.begin(), meaning.end(), 'Э') >= 4) {
                     for(int i = 0; i < meaning.size(); ++i)
@@ -706,14 +714,14 @@ void Dictionary::addSomeMeanings(string s = "")
                 }
                 else dict[word][index] = meaning;
             }
-            else if(p.first == 'j') {
+            else if(p.first == 'j') { // добавление в уже имеющиееся значение после запятой
                 if(p.second == '\0') {
                     if(dict[word].size() == 1 && dict[word][0] == " ") dict[word][0] = meaning;
                     else dict[word].back() += "," + meaning;
                 }
                 else dict[word][p.second - 49] += "," + meaning;
             }
-            else if(p.first == 'u') {
+            else if(p.first == 'u') { // удаление последнего слова/выражения после последней запятой у какого-то значения
                 int k;
                 if(p.second == '\0') k = dict[word].size() - 1;
                 else k = p.second - 49;
@@ -724,7 +732,7 @@ void Dictionary::addSomeMeanings(string s = "")
                     dict[word][k] = s;
                 }
             }
-            else if((p.first == 'f') && isdigit(p.second)) {
+            else if((p.first == 'f') && isdigit(p.second)) { // добавление нового значения
                 int k = min((int) dict[word].size(), p.second - 49);
                 if(k == dict[word].size()) {
                     if(dict[word].size() == 1 && dict[word][0] == " ") dict[word][0] = meaning;
@@ -738,7 +746,19 @@ void Dictionary::addSomeMeanings(string s = "")
                     dict[word] = new_meaning;
                 }
             }
-            else {
+            else if(p.first == 'k') { // замена слова (ключа)
+                meaning.erase(0, 1);
+                for(int i = 0; i < meaning.size(); ++i)
+                    if(meaning[i] == ' ') meaning[i] = '_';
+                if(dict.find(meaning) == dict.end() && all_dict.find(meaning) == all_dict.end()) {
+                    dict[meaning] = dict[word];
+                    dict.erase(dict.find(word));
+                    word = meaning;
+                    last_word.pop();
+                    last_word.push(word);
+                }
+            }
+            else if(p.first != 'b') {
                 if(dict[word].size() == 1 && dict[word][0] == " ") dict[word][0] = meaning;
                 else dict[word].push_back(meaning);
             }
@@ -788,6 +808,7 @@ void Dictionary::addSomeMeanings(string s = "")
             }
             delete temp;
         }
+        if(!wordIsLocal) dict.erase(dict.find(word));
     }
 }
 

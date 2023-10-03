@@ -48,14 +48,17 @@ int main()
     map<string, vector<string>> films;
     string s, film_name, just_a_name = "", afterSlash;
     dir = opendir("Dictionaries");
+    bool isFolder;
     while((entry = readdir(dir)) != nullptr) {
         innerFolderFilms.clear();
         s = entry->d_name;
         if(s == "." || s == ".." || s == "__excluded__.txt") continue;
+        isFolder = false;
         if(s.substr(0, 7) == "papka__") {
+            isFolder = true;
             if(s.substr(s.size() - 4) == ".txt") {
                 cout << "\nСоздался файл \"" << s << "\"\n";
-                exit(1);
+                exit(-1);
             }
             DIR *innerDir = opendir(("Dictionaries/" + s).c_str());
             if(!innerDir) {
@@ -76,6 +79,7 @@ int main()
         }
         else s.erase(s.size() - 4);
         Dictionary::pathToDemonstration(s);
+        if(isFolder) s += ' ';
         films[s] = innerFolderFilms;
     }
     closedir(dir);
@@ -84,13 +88,18 @@ int main()
     char c[2];
     bool ok = 0;
     int k = -1, k_withFolderOpen = -1, realCurrentLine = -1;
+    char changer;
     cout << "\n\tВведите название фильма: ";
     cin.sync();
     while(1) {
         c[0] = _getch();
         if(c[0] == ' ' && !film_name.size() || c[0] == ' ' && film_name.back() == ' ') continue;
-        if(c[0] == 13) { // enter
-            if(~k) {
+        if(c[0] == 13 || c[0] == 9) { // enter
+            if(film_name == "" && c[0] == 9) {
+                film_name = "all";
+                break;
+            }
+            if(k != -1) {
                 if(!films[vars[k]].size()) {
                     film_name = vars[k];
                     break;
@@ -109,7 +118,7 @@ int main()
                     goto folderAddedToVars;
                 }
                 else {
-                    film_name = "papka__" + vars[k] + "/";
+                    film_name = "papka__" + vars[k].substr(0, vars[k].size() - 1) + "/";
                     int index = -1;
                     while(kIsInFolder[realCurrentLine]) {
                         realCurrentLine--;
@@ -119,10 +128,17 @@ int main()
                     break;
                 }
             }
-            else if(film_name.size()) break;
+            else {
+                if(film_name.size() && c[0] == 13) break;
+                else if(c[0] == 9) {
+                    film_name = vars[0];
+                    if(film_name.back() == ' ') film_name.erase(film_name.size() - 1);
+                    if(films[vars[0]].size()) film_name += "/all";
+                    break;
+                }
+            }
             continue;
         }
-        sameUpOrDown2: // это для кнопок j, k, ctrl-j и ctrl-k
         if((c[0] == 8 || c[0] == 127) && film_name.size()) { // backspace || ctrl + backspace
             if(c[0] == 8) film_name.pop_back();
             else {
@@ -138,111 +154,15 @@ int main()
                     it->second.pop_back();
             }
         }
-        else if(c[0] == 9) { // tab
-            if(film_name == "") {
-                film_name = "all";
-                break;
-            }
-            if(k != -1 && films[vars[k]].size()) {
-                if(films[vars[k]].back() == "DOBAVLEN") {
-                    films[vars[k]].pop_back();
-                    kIsInFolder.erase(kIsInFolder.begin() + realCurrentLine+1, kIsInFolder.begin() + realCurrentLine+1 + films[vars[k]].size());
-                }
-                else {
-                    kIsInFolder.insert(kIsInFolder.begin() + realCurrentLine+1, films[vars[k]].size(), 1);
-                    films[vars[k]].push_back("DOBAVLEN");
-                }
-                system("cls");
-                cout << "\n\tВведите название фильма: " << film_name;
-                goto folderAddedToVars;
-            }
-            if(~k) film_name = vars[k];
-            else if(vars.size()) {
-                film_name = vars[0];
-                if(films[vars[0]].size()) film_name += "/all";
-            }
-            break;
-        }
-
-        // абсолютно такие же 4 куска кода что и снизу со стрелками вверх/вниз и ctrl-вверх/ctrl-вниз
-        // условия не объеденены, потому что клавиши j, k, ctrl-j и ctrl-k занимают 1 байт, а стрелки 2 байта, вот такая вот хуйня
-        else if(c[0] == 'k' || c[0] == -85) { // up
-            if(k == -1 || k == 0 && k_withFolderOpen == -1) {
-                if(kIsInFolder.size() && kIsInFolder.back())
-                    k_withFolderOpen = kIsInFolder.size() - 1;
-                k = vars.size() - 1;
-                realCurrentLine = kIsInFolder.size() - 1;
-            }
-            else {  // если курсор еще не достиг первой строки
-                if(k_withFolderOpen == -1) {
-                    if(films[vars[k - 1]].size() && films[vars[k - 1]].back() == "DOBAVLEN")
-                        k_withFolderOpen = k - 2 + films[vars[k - 1]].size();
-                    k--;
-                }
-                else { // если курсор в папке в наст.вр.
-                    if(kIsInFolder[realCurrentLine - 1])
-                        k_withFolderOpen--;
-                    else k_withFolderOpen = -1;
-                }
-                realCurrentLine--;
-            }
-            goto justArrows;
-        }
-        else if(c[0] == 'j' || c[0] == -82) { // down
-            if(k == -1 || realCurrentLine + 1 == kIsInFolder.size()) {
-                k = 0;
-                realCurrentLine = 0;
-                k_withFolderOpen = -1;
-            }
-            else { // если курсор еще не достиг последней строки
-                if(k_withFolderOpen == -1) {
-                    if(kIsInFolder[realCurrentLine + 1]) k_withFolderOpen = k + 1;
-                    else k++;
-                }
-                else { // если курсор в папке в наст.вр.
-                    if(kIsInFolder[realCurrentLine + 1])
-                        k_withFolderOpen++;
-                    else {
-                        k++;
-                        k_withFolderOpen = -1;
-                    }
-                }
-                realCurrentLine++;
-            }
-            goto justArrows;
-        }
-        else if(c[0] == 11) { // ctrl + k
-            if(realCurrentLine == -1 || !realCurrentLine || !kIsInFolder[realCurrentLine - 1] ||
-               kIsInFolder[realCurrentLine - 1] && !kIsInFolder[realCurrentLine] ||
-               !kIsInFolder[realCurrentLine - 1] && kIsInFolder[realCurrentLine]) {
-                c[0] = 'k';
-                goto sameUpOrDown2;
-            }
-            else do {
-                k_withFolderOpen--;
-                realCurrentLine--;
-            }while(kIsInFolder[realCurrentLine - 1]);
-            goto justArrows;
-        }
-        else if(c[0] == 10) { // ctrl + j
-            if(!kIsInFolder[realCurrentLine + 1]) { // курсор уже в конце папки ИЛИ вне папки и не попадает в нее
-                c[0] = 'j';
-                goto sameUpOrDown2;
-            }
-            else { // курсор не в конце папки ИЛИ курсор на названии открытой папки и сейчас попадет туда
-                do {
-                    if(k_withFolderOpen == -1) k_withFolderOpen = k + 1;
-                    else k_withFolderOpen++;
-                    realCurrentLine++;
-                }while(kIsInFolder[realCurrentLine + 1]);
-            }
-            goto justArrows;
-        }
-        /////////////////////////////////////////////////////////////////////////////////////////
+        else if(c[0] == 'k' || c[0] == -85) goto arrowUp;       // up
+        else if(c[0] == 'j' || c[0] == -82) goto arrowDown;     // down;
+        else if(c[0] == 11)                 goto ctrlArrowUp;   // ctrl + k
+        else if(c[0] == 10)                 goto ctrlArrowDown; // ctrl + j
         else if(c[0] == -32 && kbhit()) {
-            char changer = _getch();
+            changer = _getch();
             sameUpOrDown:
             if(changer == 72) { // up
+                arrowUp:
                 if(k == -1 || k == 0 && k_withFolderOpen == -1) {
                     if(kIsInFolder.size() && kIsInFolder.back())
                         k_withFolderOpen = kIsInFolder.size() - 1;
@@ -264,6 +184,7 @@ int main()
                 }
             }
             else if(changer == 80) { // down
+                arrowDown:
                 if(k == -1 || realCurrentLine + 1 == kIsInFolder.size()) {
                     k = 0;
                     realCurrentLine = 0;
@@ -286,6 +207,7 @@ int main()
                 }
             }
             else if(changer == -115) { // ctrl + up
+                ctrlArrowUp:
                 if(realCurrentLine == -1 || !realCurrentLine || !kIsInFolder[realCurrentLine - 1] ||
                    kIsInFolder[realCurrentLine - 1] && !kIsInFolder[realCurrentLine] ||
                    !kIsInFolder[realCurrentLine - 1] && kIsInFolder[realCurrentLine]) {
@@ -298,6 +220,7 @@ int main()
                 }while(kIsInFolder[realCurrentLine - 1]);
             }
             else if(changer == -111) { // ctrl + down
+                ctrlArrowDown:
                 if(!kIsInFolder[realCurrentLine + 1]) { // курсор уже в конце папки ИЛИ вне папки и не попадает в нее
                     changer = 80;
                     goto sameUpOrDown;
@@ -652,7 +575,7 @@ void dirCommand(map<string, vector<string>>& films, string& film_name)
                 else exit(-2);
             }
             else exit(-2);
-            goto firstTimee;
+            goto gFirstTime;
         }
         choice = _getch();
         if(hWndConsole = GetStdHandle(-12))
@@ -834,7 +757,7 @@ void dirCommand(map<string, vector<string>>& films, string& film_name)
         }
         else continue;
 
-        firstTimee:
+        gFirstTime:
         system("cls");
         int i_lineCounter = 0; // для подкрашивания строки, на которой курсор
 
@@ -928,7 +851,7 @@ void renew(map<string, vector<string>>& films)
     for(auto it = films.begin(); it != films.end(); ++it) {
         if(it->first == "all") continue;
         if(it->second.size()) {
-            folder = "papka__" + it->first + "/";
+            folder = "papka__" + it->first.substr(0, it->first.size() - 1) + "/";
             for(int i = 0; i < it->second.size(); ++i) {
                 path = folder + it->second[i];
                 Dictionary::demonstrationToPath(path);
