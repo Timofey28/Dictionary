@@ -7,6 +7,7 @@ using namespace std;
 void setPosition(int, int);
 void dirCommand(map<string, vector<string>>& films, string& film_name);
 void renew(map<string, vector<string>>& films);
+pair<int, int> getScreenWH();
 set<string> excluded;
 
 int main()
@@ -105,13 +106,13 @@ int main()
                     break;
                 }
                 else if(k_withFolderOpen == -1) {
-                    if(films[vars[k]].back() == "DOBAVLEN") {
+                    if(films[vars[k]].back() == "PAPKA_OTKRITA") {
                         films[vars[k]].pop_back();
                         kIsInFolder.erase(kIsInFolder.begin() + realCurrentLine+1, kIsInFolder.begin() + realCurrentLine+1 + films[vars[k]].size());
                     }
                     else {
                         kIsInFolder.insert(kIsInFolder.begin() + realCurrentLine+1, films[vars[k]].size(), 1);
-                        films[vars[k]].push_back("DOBAVLEN");
+                        films[vars[k]].push_back("PAPKA_OTKRITA");
                     }
                     system("cls");
                     cout << "\n\tВведите название фильма: " << film_name;
@@ -150,7 +151,7 @@ int main()
             k_withFolderOpen = -1;
             realCurrentLine = -1;
             for(auto it = films.begin(); it != films.end(); ++it) {
-                if(it->second.size() && it->second.back() == "DOBAVLEN")
+                if(it->second.size() && it->second.back() == "PAPKA_OTKRITA")
                     it->second.pop_back();
             }
         }
@@ -158,7 +159,7 @@ int main()
         else if(c[0] == 'j' || c[0] == -82) goto arrowDown;     // down;
         else if(c[0] == 11)                 goto ctrlArrowUp;   // ctrl + k
         else if(c[0] == 10)                 goto ctrlArrowDown; // ctrl + j
-        else if(c[0] == -32 && kbhit()) {
+        else if(c[0] == -32 && kbhit()) { // стрелки
             changer = _getch();
             sameUpOrDown:
             if(changer == 72) { // up
@@ -171,7 +172,7 @@ int main()
                 }
                 else {  // если курсор еще не достиг первой строки
                     if(k_withFolderOpen == -1) {
-                        if(films[vars[k - 1]].size() && films[vars[k - 1]].back() == "DOBAVLEN")
+                        if(films[vars[k - 1]].size() && films[vars[k - 1]].back() == "PAPKA_OTKRITA")
                             k_withFolderOpen = k - 2 + films[vars[k - 1]].size();
                         k--;
                     }
@@ -257,7 +258,7 @@ int main()
             else if(c[0] != 8) film_name += c[0];
 
             for(auto it = films.begin(); it != films.end(); ++it) {
-                if(it->second.size() && it->second.back() == "DOBAVLEN")
+                if(it->second.size() && it->second.back() == "PAPKA_OTKRITA")
                     it->second.pop_back();
             }
         }
@@ -286,31 +287,6 @@ int main()
             cout << "\n\tВведите название фильма: ";
             vars.clear();
             goto folderAddedToVars;
-//            cout << "\n";
-//            for(int i = 0; i < films.size(); ++i)
-//                cout << "\n\t" << i + 1 << ") " << films[i];
-//            cout << "\n\t";
-//            do {
-//                foo:
-//                getline(cin, s);
-//                while(s[0] == ' ') s.erase(0, 1);
-//                while(s.back() == ' ') s.erase(s.size()-1);
-//                if(s == "") goto another_movie;
-//                if(s == "exit" || s == "гзиҐ" || s == "EXIT") return 1;
-//                for(int i = 0; i < s.size(); ++i) {
-//                    if(!isdigit(s[i])) {
-//                        cout << "\tНеверный формат, повторите попытку => ";
-//                        goto foo;
-//                    }
-//                }
-//                k = atoi(s.c_str());
-//                if(k < 1 || k > films.size()) cout << "\tТакого номера нет, повторите попытку => ";
-//                else {
-//                    film_name = films[k-1];
-//                    ok = 1;
-//                    break;
-//                }
-//            }while(1);
         }
         if(ok) break;
         vars.clear();
@@ -352,7 +328,7 @@ int main()
             if(_kbhit()) continue;
             cout << "\n\t                        ";
             if(films[vars[i]].size()) {
-                if(films[vars[i]].back() == "DOBAVLEN") {
+                if(films[vars[i]].back() == "PAPKA_OTKRITA") {
                     if(realCurrentLine == i_lineCounter++) Dictionary::setColor(HIGHLIGHTING);
                     cout << " - " << vars[i] << ' ';
                     cout << "\n\t                         ";
@@ -545,298 +521,202 @@ int main()
 
 void dirCommand(map<string, vector<string>>& films, string& film_name)
 {
+    if(!films.size()) return;
     const int HIGHLIGHTING = 12;
-    int k = -1,
-        k_withFolderOpen = -1,
-        realCurrentLine = -1;
+    int screenHeight = getScreenWH().second;
+    vector<string> options, fullPaths;
+    vector<wstring> wstrOptions;
+    for(auto it = films.begin(); it != films.end(); ++it) {
+        if(it->second.size()) {
+            options.push_back(it->first);
+            fullPaths.push_back("");
+            wstring ws = wstring(1, 0x2261) + L" "; // 3 горизонтальные палки перед именем папки
+            wstrOptions.push_back(ws);
+        }
+    }
+    for(auto it = films.begin(); it != films.end(); ++it) {
+        if(!it->second.size()) {
+            options.push_back(it->first);
+            fullPaths.push_back(it->first);
+            wstrOptions.push_back(L"");
+        }
+    }
+    system("cls");
+    for(int i = 0; i < options.size() && i < screenHeight - 1; ++i) {
+        cout << "\n\t";
+        _setmode(_fileno(stdout), _O_U16TEXT);
+        wcout << wstrOptions[i];
+        _setmode(_fileno(stdout), _O_TEXT);
+        cout << options[i];
+    }
+
+    int cursorPos = -1,
+        firstRowNumber = -1;
     char choice;
-    vector<bool> kIsInFolder(films.size());
-    vector<string> vars;
-    for(auto it = films.begin(); it != films.end(); ++it)
-        if(it->second.size()) vars.push_back(it->first);
-    for(auto it = films.begin(); it != films.end(); ++it)
-        if(!it->second.size()) vars.push_back(it->first);
-    int height;
-    HANDLE hWndConsole;
-    bool firstTime = 1;
-    float whatsUp; // первая строка консоли в текущий момент (-1: пустая строка; 0: 1-ый элемент vars; 3.004: 4-ый элемент, 4-ый файл в папке)
-    int realWhatsUp; // номер строки, находящейся сверху
-    int total, decimal; // целая часть, дробная часть
+    bool changeCursorOnly;
+    int changeCursor_from, changeCursor_to;
     while(1) {
-        if(firstTime) {
-            firstTime = 0;
-            whatsUp = -1;
-            realWhatsUp = -1;
-            if(hWndConsole = GetStdHandle(-12))
-            {
-                CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
-                if(GetConsoleScreenBufferInfo(hWndConsole, &consoleInfo))
-                    height = consoleInfo.srWindow.Bottom - consoleInfo.srWindow.Top + 1;
-                else exit(-2);
-            }
-            else exit(-2);
-            goto gFirstTime;
-        }
+        changeCursorOnly = 0;
+        screenHeight = getScreenWH().second;
         choice = _getch();
-        if(hWndConsole = GetStdHandle(-12))
-        {
-            CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
-            if(GetConsoleScreenBufferInfo(hWndConsole, &consoleInfo))
-                height = consoleInfo.srWindow.Bottom - consoleInfo.srWindow.Top + 1;
-            else exit(-2);
-        }
-        else exit(-2);
-        if(choice == 9) { // tab
-            film_name = "all";
-            return;
-        }
-        else if(choice == 13) { // enter
-            if(~k) {
-                if(!films[vars[k]].size()) {
-                    film_name = vars[k];
+        if(choice == 'k' || choice == -85)      goto arrowUp_dirCommand;       // up
+        else if(choice == 'j' || choice == -82) goto arrowDown_dirCommand;     // down;
+        else if(choice == 11)                   goto ctrlArrowUp_dirCommand;   // ctrl + k == ctrl + up
+        else if(choice == 10)                   goto ctrlArrowDown_dirCommand; // ctrl + j == ctrl + down
+        else if(choice == 13 || choice == 9) { // enter || tab
+            if(cursorPos == -1) {
+                if(choice == 9) {
+                    film_name = "all";
                     return;
                 }
-                else if(k_withFolderOpen == -1) {
-                    if(films[vars[k]].back() == "DOBAVLEN") {
-                        films[vars[k]].pop_back();
-                        kIsInFolder.erase(kIsInFolder.begin() + realCurrentLine+1, kIsInFolder.begin() + realCurrentLine+1 + films[vars[k]].size());
-                    }
-                    else {
-                        kIsInFolder.insert(kIsInFolder.begin() + realCurrentLine+1, films[vars[k]].size(), 1);
-                        films[vars[k]].push_back("DOBAVLEN");
-                    }
+                else continue;
+            }
+            if(options[cursorPos].back() != ' ') {
+                film_name = fullPaths[cursorPos];
+                return;
+            }
+            else {
+                if(films[options[cursorPos]].back() == "PAPKA_OTKRITA") {
+                    films[options[cursorPos]].pop_back();
+                    int filesAmount = films[options[cursorPos]].size();
+                    wstrOptions[cursorPos] = wstring(1, 0x2261) + L" ";
+                    options.erase(options.begin() + cursorPos + 1, options.begin() + cursorPos + 1 + filesAmount);
+                    wstrOptions.erase(wstrOptions.begin() + cursorPos + 1, wstrOptions.begin() + cursorPos + 1 + filesAmount);
+                    fullPaths.erase(fullPaths.begin() + cursorPos + 1, fullPaths.begin() + cursorPos + 1 + filesAmount);
                 }
                 else {
-                    film_name = "papka__" + vars[k] + "/";
-                    int index = -1;
-                    while(kIsInFolder[realCurrentLine]) {
-                        realCurrentLine--;
-                        index++;
-                    }
-                    film_name += films[vars[k]][index];
-                    return;
+                    wstrOptions[cursorPos] = L"- ";
+                    vector<string> content(films[options[cursorPos]]);
+                    for(int i = 0; i < content.size(); ++i)
+                        content[i] = "papka__" + options[cursorPos].substr(0, options[cursorPos].size() - 1) + "/" + content[i];
+                    vector<wstring> wstr_content(content.size());
+                    wstr_content[0] = wstring(3, 0x203E) + L"|- "; // 3 верхних подчеркивания
+                    for(int i = 1; i < content.size(); ++i)
+                        wstr_content[i] = L"   |- ";
+                    options.insert(options.begin() + cursorPos + 1, films[options[cursorPos]].begin(), films[options[cursorPos]].end());
+                    wstrOptions.insert(wstrOptions.begin() + cursorPos + 1, wstr_content.begin(), wstr_content.end());
+                    fullPaths.insert(fullPaths.begin() + cursorPos + 1, content.begin(), content.end());
+                    films[options[cursorPos]].push_back("PAPKA_OTKRITA");
                 }
             }
-            else continue;
-        }
-        else if(choice == -32 && kbhit()) { // стрелки
-            char changer = _getch();
-            sameUpOrDown:
-            total = floor(whatsUp);
-            decimal = (whatsUp - total) * 1000;
-            if(total == -1) total++;
-            if(changer == 72) { // up
-//                system("cls"); cout << "\n\tk: " << k << "\n\tk_withFolderOpen: " << k_withFolderOpen; cin.sync(); cin.get();
-                if(k == -1 || k == 0 && k_withFolderOpen == -1) {
-                    if(kIsInFolder.size() && kIsInFolder.back())
-                        k_withFolderOpen = kIsInFolder.size() - 1;
-                    k = vars.size() - 1;
-//                cout << "\n\n\tk: " << k << "\n\tk_withFolderOpen: " << k_withFolderOpen; cin.sync(); cin.get();
-                    realCurrentLine = kIsInFolder.size() - 1;
-                    if(realCurrentLine + 1 < height - 1) {
-                        whatsUp = -1;
-                        realWhatsUp = -1;
-                    }
-                    else {
-//                        system("cls"); cout << "here"; cin.sync(); cin.get();
-                        int ones = -1,
-                            h = height - 1,
-                            realCL = realCurrentLine;
-                        whatsUp = count(kIsInFolder.begin(), kIsInFolder.end(), 0);
-                        realWhatsUp = kIsInFolder.size() - h;
-                        while(h--) {
-                            if(kIsInFolder[realCL]) {
-                                if(ones == -1) {
-                                    ones = 1;
-                                    while(kIsInFolder[kIsInFolder.size()-1 - (realCurrentLine - realCL) - ones]) ones++;
-                                    whatsUp = floor(whatsUp) - 1 + float(ones) / 1000;
-                                }
-                                whatsUp -= 0.001;
-                            }
-                            else {
-                                whatsUp = round(whatsUp) - 1;
-                                ones = -1;
-                            }
-                            realCL--;
-                        }
-                    }
-//                    cout << "\n\trealCurrentLine: " << realCurrentLine << "\n\twhatsUp: " << whatsUp << "\n"; cin.sync(); cin.get();
-                }
-                else {  // если курсор еще не достиг первой строки
-                    if(realCurrentLine == realWhatsUp) {
-                        if(kIsInFolder[realWhatsUp]) {
-                            whatsUp -= 0.001;
-                            if(whatsUp < 0) whatsUp = 0;
-                        }
-                        else {
-                            if(kIsInFolder[realWhatsUp - 1]) { // из "непапки" в папку
-                                int ones = 1;
-                                while(kIsInFolder[realWhatsUp-1 - ones]) ones++;
-                                whatsUp = round(whatsUp) - 1 + float(ones) / 1000;
-                            }
-                            else whatsUp--; // из "непапки" в "непапку"
-                        }
-                        realWhatsUp--;
-                    }
-
-                    if(k_withFolderOpen == -1) {
-                        if(films[vars[k - 1]].size() && films[vars[k - 1]].back() == "DOBAVLEN")
-                            k_withFolderOpen = k - 2 + films[vars[k - 1]].size();
-                        k--;
-                    }
-                    else { // если курсор в папке в наст.вр.
-                        if(kIsInFolder[realCurrentLine - 1])
-                            k_withFolderOpen--;
-                        else k_withFolderOpen = -1;
-                    }
-                    realCurrentLine--;
-                }
-//                cout << "\n\n\tk: " << k << "\n\tk_withFolderOpen: " << k_withFolderOpen; cin.sync(); cin.get();
-            }
-            else if(changer == 80) { // down
-                if(k == -1 || realCurrentLine + 1 == kIsInFolder.size()) {
-                    k = 0;
-                    realCurrentLine = 0;
-                    k_withFolderOpen = -1;
-                    whatsUp = -1;
-                    realWhatsUp = -1;
-                }
-                else { // если курсор еще не достиг последней строки
-
-                    if(realCurrentLine - realWhatsUp + 1 == height) {
-                        if(kIsInFolder[realWhatsUp + 1]) whatsUp += 0.001;
-                        else whatsUp = floor(whatsUp) + 1;
-                        realWhatsUp++;
-                    }
-
-                    if(k_withFolderOpen == -1) {
-                        if(kIsInFolder[realCurrentLine + 1]) k_withFolderOpen = k + 1;
-                        else k++;
-                    }
-                    else { // если курсор в папке в наст.вр.
-                        if(kIsInFolder[realCurrentLine + 1])
-                            k_withFolderOpen++;
-                        else {
-                            k++;
-                            k_withFolderOpen = -1;
-                        }
-                    }
-                    realCurrentLine++;
-                }
-            }
-            else if(changer == -115) { // ctrl + up
-                if(realCurrentLine == -1 || !realCurrentLine || !kIsInFolder[realCurrentLine - 1] ||
-                   kIsInFolder[realCurrentLine - 1] && !kIsInFolder[realCurrentLine] ||
-                   !kIsInFolder[realCurrentLine - 1] && kIsInFolder[realCurrentLine]) {
-                    changer = 72;
-                    goto sameUpOrDown;
-                }
-                else do {
-                    k_withFolderOpen--;
-                    realCurrentLine--;
-                }while(kIsInFolder[realCurrentLine - 1]);
-            }
-            else if(changer == -111) { // ctrl + down
-                if(!kIsInFolder[realCurrentLine + 1]) { // курсор уже в конце папки ИЛИ вне папки и не попадает в нее
-                    changer = 80;
-                    goto sameUpOrDown;
-                }
-                else { // курсор не в конце папки ИЛИ курсор на названии открытой папки и сейчас попадет туда
-                    do {
-                        if(k_withFolderOpen == -1) k_withFolderOpen = k + 1;
-                        else k_withFolderOpen++;
-                        realCurrentLine++;
-                    }while(kIsInFolder[realCurrentLine + 1]);
-                }
-            }
-            else continue;
         }
         else if(choice == 8 || choice == 27) { // backspace || escape
             film_name = "";
             return;
         }
-        else continue;
-
-        gFirstTime:
-        system("cls");
-        int i_lineCounter = 0; // для подкрашивания строки, на которой курсор
-
-//        cout << "\n\twhatsUp: " << whatsUp << "\n\trealWhatsUp: " << realWhatsUp<<"\n\tdecimal: " << decimal; cin.sync(); cin.get();
-        bool firstLine = 1;
-        total = floor(whatsUp);
-        decimal = (whatsUp - total) * 1000;
-        int h = 0;
-        if(whatsUp == -1) {
-            cout << "\n";
-            h++;
-        }
-        else {
-//            int zeros = 0;
-//            while(i_lineCounter < kIsInFolder.size()) {
-//                if(!kIsInFolder[i_lineCounter]) zeros++;
-//                if(zeros > total) break;
-//                i_lineCounter++;
-//            }
-//            i_lineCounter += decimal;
-            i_lineCounter = realWhatsUp;
-        }
-        int printFrom;
-        if(total == -1) total++;
-        for(int i = total; i < kIsInFolder.size(); ++i) {
-            if(_kbhit()) continue;
-            if(firstLine) {
-                firstLine = 0;
-                cout << "\t";
-            }
-            else cout << "\n\t";
-
-            if(films[vars[i]].size()) {
-                if(films[vars[i]].back() == "DOBAVLEN") {
-                    if(decimal > 0) {
-                        printFrom = decimal - 1;
-                        decimal = 0;
-                    }
-                    else {
-                        printFrom = 0;
-                        if(realCurrentLine == i_lineCounter++) Dictionary::setColor(HIGHLIGHTING);
-                        cout << " - " << vars[i] << ' ';
-                        Dictionary::setColor(15);
-                        if(++h == height) break;
-                    }
-                    for(int j = printFrom; j < films[vars[i]].size() - 1; ++j) {
-                        if(!h) cout << " ";
-                        else cout << "\n\t ";
-                        if(!j) {
-                            if(realCurrentLine == i_lineCounter++) Dictionary::setColor(HIGHLIGHTING);
-                            _setmode(_fileno(stdout), _O_U16TEXT);
-                            wcout << (wchar_t) 0x203E << (wchar_t) 0x203E << (wchar_t) 0x203E;
-                            _setmode(_fileno(stdout), _O_TEXT);
-                            cout << "|- " << films[vars[i]][0];
-                            Dictionary::setColor(15);
-                        }
-                        else {
-                            if(realCurrentLine == i_lineCounter++) Dictionary::setColor(HIGHLIGHTING);
-                            cout << "   |- " << films[vars[i]][j];
-                            Dictionary::setColor(15);
-                        }
-                        if(++h == height) break;
-                    }
+        else if(choice == -32 && _kbhit()) { // стрелки
+            choice = _getch();
+            sameUpOrDown:
+            if(choice == 72) { // up
+                arrowUp_dirCommand:
+                if(cursorPos == -1 || cursorPos == 0) {
+                    cursorPos = options.size() - 1;
+                    firstRowNumber = max(-1, cursorPos - screenHeight + 2);
                 }
                 else {
-                    if(realCurrentLine == i_lineCounter++) Dictionary::setColor(HIGHLIGHTING);
-                    _setmode(_fileno(stdout), _O_U16TEXT);
-                    wcout << " " << (wchar_t) 0x2261;
-                    _setmode(_fileno(stdout), _O_TEXT);
-                    cout << ' ' << vars[i] << ' ';
-                    Dictionary::setColor(15);
-                    if(++h == height) break;
+                    if(firstRowNumber == cursorPos) firstRowNumber--;
+                    else {
+                        changeCursorOnly = 1;
+                        changeCursor_from = cursorPos;
+                        changeCursor_to = cursorPos - 1;
+                    }
+                    cursorPos--;
                 }
             }
-            else {
-                if(realCurrentLine == i_lineCounter++) Dictionary::setColor(HIGHLIGHTING);
-                cout << ' ' << vars[i] << ' ';
+            else if(choice == 80) { // down
+                arrowDown_dirCommand:
+                if(cursorPos == -1 || cursorPos == options.size() - 1) {
+                    cursorPos = 0;
+                    firstRowNumber = -1;
+                }
+                else {
+                    if(cursorPos - firstRowNumber + 1 == screenHeight) firstRowNumber++;
+                    else {
+                        changeCursorOnly = 1;
+                        changeCursor_from = cursorPos;
+                        changeCursor_to = cursorPos + 1;
+                    }
+                    cursorPos++;
+                }
+            }
+            else if(choice == -115) { // ctrl + up
+                ctrlArrowUp_dirCommand:
+                if(!cursorPos) {
+                    if(!firstRowNumber) firstRowNumber = -1;
+                    else continue;
+                }
+                else if(fullPaths[cursorPos].substr(0, 7) != "papka__" ||
+                        fullPaths[cursorPos].substr(0, 7) == "papka__" && fullPaths[cursorPos - 1] == "") {
+                    choice = 72;
+                    goto sameUpOrDown;
+                }
+                else {
+                    changeCursor_from = cursorPos;
+                    do cursorPos--;
+                    while(fullPaths[cursorPos] != "");
+                    cursorPos++;
+                    if(cursorPos < firstRowNumber) firstRowNumber = cursorPos;
+                    else {
+                        changeCursorOnly = 1;
+                        changeCursor_to = cursorPos;
+                    }
+                }
+            }
+            else if(choice == -111) { // ctrl + down
+                ctrlArrowDown_dirCommand:
+                if(cursorPos == options.size() - 1) {
+                    if(cursorPos - firstRowNumber + 1 == screenHeight) firstRowNumber++;
+                    else continue;
+                }
+                else if(!(fullPaths[cursorPos] == "" && films[options[cursorPos]].back() == "PAPKA_OTKRITA" || fullPaths[cursorPos].substr(0, 7) == "papka__") ||
+                        fullPaths[cursorPos].substr(0, 7) == "papka__" && (cursorPos + 1 == fullPaths.size() || fullPaths[cursorPos + 1].substr(0, 7) != "papka__")) {
+                    choice = 80;
+                    goto sameUpOrDown;
+                }
+                else {
+                    changeCursor_from = cursorPos;
+                    do cursorPos++;
+                    while(cursorPos < fullPaths.size() && fullPaths[cursorPos].substr(0, 7) == "papka__");
+                    cursorPos--;
+                    if(cursorPos - screenHeight + 1 > firstRowNumber) firstRowNumber = cursorPos - screenHeight + 1;
+                    else {
+                        changeCursorOnly = 1;
+                        changeCursor_to = cursorPos;
+                    }
+                }
+            }
+        }
+        else continue;
+
+        if(changeCursorOnly) {
+            int y = changeCursor_from - firstRowNumber;
+            setPosition(8, y);
+            _setmode(_fileno(stdout), _O_U16TEXT);
+            wcout << wstrOptions[changeCursor_from];
+            _setmode(_fileno(stdout), _O_TEXT);
+            cout << options[changeCursor_from];
+            y = changeCursor_to - firstRowNumber;
+            setPosition(8, y);
+            Dictionary::setColor(HIGHLIGHTING);
+            _setmode(_fileno(stdout), _O_U16TEXT);
+            wcout << wstrOptions[changeCursor_to];
+            _setmode(_fileno(stdout), _O_TEXT);
+            cout << options[changeCursor_to];
+            Dictionary::setColor(15);
+        }
+        else {
+            system("cls");
+            if(firstRowNumber == -1) screenHeight--;
+            int startWith = max(0, firstRowNumber);
+            for(int i = startWith; i < options.size() && i < screenHeight + startWith; ++i) {
+                if(i == startWith && firstRowNumber != -1) cout << "\t";
+                else cout << "\n\t";
+                if(i == cursorPos) Dictionary::setColor(HIGHLIGHTING);
+                _setmode(_fileno(stdout), _O_U16TEXT);
+                wcout << wstrOptions[i];
+                _setmode(_fileno(stdout), _O_TEXT);
+                cout << options[i];
                 Dictionary::setColor(15);
-                if(++h == height) break;
             }
         }
     }
@@ -880,6 +760,22 @@ void renew(map<string, vector<string>>& films)
             }
         }
     }
+}
+
+pair<int, int> getScreenWH()
+{
+    HANDLE hWndConsole;
+    if(hWndConsole = GetStdHandle(-12))
+    {
+        CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
+        if(GetConsoleScreenBufferInfo(hWndConsole, &consoleInfo)) {
+            int width  = consoleInfo.srWindow.Right  - consoleInfo.srWindow.Left + 1;
+            int height = consoleInfo.srWindow.Bottom - consoleInfo.srWindow.Top  + 1;
+            return {width, height};
+        }
+        else exit(-1);
+    }
+    else exit(-1);
 }
 
 void setPosition(int x, int y)
