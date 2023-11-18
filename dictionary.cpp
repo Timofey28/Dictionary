@@ -28,16 +28,39 @@ Dictionary::Dictionary(string file_name)
     }
 }
 
-pair<char, char> Dictionary::enterWord(string& word, bool isAdding)
+pair<char, char> Dictionary::enterWord(string& meaning, bool isAdding)
 {
-    word = "";
+    meaning = "";
     char input[100];
+    bool ignoreSpecialCharacters = 0;
     cin >> input;
     while(1) {
         OemToCharA(input, input);
+        string word(input);
+        if(ignoreSpecialCharacters) {
+            if(word.back() == '*') {
+                word.pop_back();
+                if(!word.size() && meaning.back() == ' ') {
+                    while(meaning.back() == ' ') meaning.pop_back();
+                }
+                ignoreSpecialCharacters = 0;
+            }
+            if(word.size()) meaning += " " + word;
+            cin >> input;
+            continue;
+        }
+        if(!ignoreSpecialCharacters && word[0] == '*') {
+            word.erase(0, 1);
+            if(word.back() == '*') word.pop_back();
+            else ignoreSpecialCharacters = 1;
+            if(word.size()) meaning += " " + word;
+            cin >> input;
+            continue;
+        }
+
         if(strlen(input) < 3) {
             if((input[0] == 'r' || input[0] == 'к' || input[0] == 'R' || input[0] == 'К') && input[1] == '\0') {
-                if(word == "") word = " ";
+                if(meaning == "") meaning = " ";
                 return {'r', '\0'};
             }
             if((input[0] == 'f' || input[0] == 'а' || input[0] == 'F' || input[0] == 'А') && input[1] == '\0')
@@ -49,6 +72,8 @@ pair<char, char> Dictionary::enterWord(string& word, bool isAdding)
             if(isAdding) goto off;
             if((input[0] == 'j' || input[0] == 'о') && (input[1] == '\0' || isdigit(input[1])))
                 return {'j', input[1]};
+            if((input[0] == 'k' || input[0] == 'л') && (input[1] == '\0' || isdigit(input[1])))
+                return {'k', input[1]};
             if((input[0] == 'u' || input[0] == 'г') && (input[1] == '\0' || isdigit(input[1])))
                 return {'u', input[1]};
             if((input[0] == 'z' || input[0] == 'я') && (input[1] == '\0' || isdigit(input[1])))
@@ -59,13 +84,13 @@ pair<char, char> Dictionary::enterWord(string& word, bool isAdding)
                 return {'f', input[1]};
             if((input[0] == 'r' || input[0] == 'к' || input[0] == 'R' || input[0] == 'К') && isdigit(input[1]))
                 return {'r', input[1]};
-            if(strlen(input) == 1 && input[0] == 'k' || input[0] == -85)
-                return {'k', '\0'};
+            if(strlen(input) == 1 && input[0] == 'g' || input[0] == -17)
+                return {'g', '\0'};
         }
         off:
         string cppInput(input);
         if(cppInput[0] == '\\') cppInput.erase(0, 1);
-        word += " " + cppInput;
+        meaning += " " + cppInput;
         cin >> input;
     }
 }
@@ -644,7 +669,7 @@ void Dictionary::addSomeMeanings(string s = "")
             perror(endProgram.c_str());
             exit(-1);
         }
-        cout << "\n\tNo such word. Wanna add? ";
+        cout << "\n\tNo such word. Wanna add?";
         string choice;
         cin.sync();
         getline(cin, choice);
@@ -660,7 +685,7 @@ void Dictionary::addSomeMeanings(string s = "")
             printAWord(word);
             cout << "\n\n\tWrite a meaning: ";
             pair<char, char> p = enterWord(meaning);
-            if(p.first == 'r') { // выход/добавление слова и затем сразу выход
+            if(p.first == 'r') { // выход/добавление нового значения и затем сразу выход
                 if(isdigit(p.second)) {
                     int k = min((int) dict[word].size(), p.second - 49);
                     if(k == dict[word].size()) {
@@ -714,12 +739,19 @@ void Dictionary::addSomeMeanings(string s = "")
                 }
                 else dict[word][index] = meaning;
             }
-            else if(p.first == 'j') { // добавление в уже имеющиееся значение после запятой
+            else if(p.first == 'j') { // добавление в уже имеющееся значение после запятой
                 if(p.second == '\0') {
                     if(dict[word].size() == 1 && dict[word][0] == " ") dict[word][0] = meaning;
                     else dict[word].back() += "," + meaning;
                 }
-                else dict[word][p.second - 49] += "," + meaning;
+                else dict[word][max(0, p.second - 49)] += "," + meaning;
+            }
+            else if(p.first == 'k') { // добавление в уже имеющееся значение после пробела
+                if(p.second == '\0') {
+                    if(dict[word].size() == 1 && dict[word][0] == " ") dict[word][0] = meaning;
+                    else dict[word].back() += meaning;
+                }
+                else dict[word][max(0, p.second - 49)] += meaning;
             }
             else if(p.first == 'u') { // удаление последнего слова/выражения после последней запятой у какого-то значения
                 int k;
@@ -733,7 +765,7 @@ void Dictionary::addSomeMeanings(string s = "")
                 }
             }
             else if((p.first == 'f') && isdigit(p.second)) { // добавление нового значения
-                int k = min((int) dict[word].size(), p.second - 49);
+                int k = max(min((int) dict[word].size(), p.second - 49), 0);
                 if(k == dict[word].size()) {
                     if(dict[word].size() == 1 && dict[word][0] == " ") dict[word][0] = meaning;
                     else dict[word].push_back(meaning);
@@ -746,7 +778,7 @@ void Dictionary::addSomeMeanings(string s = "")
                     dict[word] = new_meaning;
                 }
             }
-            else if(p.first == 'k') { // замена слова (ключа)
+            else if(p.first == 'g') { // замена слова
                 meaning.erase(0, 1);
                 for(int i = 0; i < meaning.size(); ++i)
                     if(meaning[i] == ' ') meaning[i] = '_';
@@ -754,7 +786,7 @@ void Dictionary::addSomeMeanings(string s = "")
                     dict[meaning] = dict[word];
                     dict.erase(dict.find(word));
                     word = meaning;
-                    last_word.pop();
+                    if(last_word.size()) last_word.pop();
                     last_word.push(word);
                 }
             }

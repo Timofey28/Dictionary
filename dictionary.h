@@ -9,7 +9,7 @@ class Dictionary
     std::stack<std::string> last_word;
     void printAWord(std::string& word, int spaces_amount = 0, std::string toUpper = "", int color = 15, bool from_all_dict = 0);
     bool examRightAnswer(std::vector<std::string>& answers, std::string answer);
-    std::pair<char, char> enterWord(std::string& word, bool isAdding = 0);
+    std::pair<char, char> enterWord(std::string& meaning, bool isAdding = 0);
     COORD getPos();
     char getChar(short, short);
     void readDic(std::string path, std::map<std::string, std::vector<std::string>>& dic);
