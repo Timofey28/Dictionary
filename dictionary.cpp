@@ -679,6 +679,10 @@ void Dictionary::addSomeMeanings(string s = "")
         }
     }
     else {
+        CONSOLE_CURSOR_INFO structCursorInfo;
+        GetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &structCursorInfo);
+        structCursorInfo.bVisible = TRUE;
+        SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &structCursorInfo);
         vector<string> oldMeaning = dict[word];
         while(1) {
             system("cls");
@@ -795,52 +799,55 @@ void Dictionary::addSomeMeanings(string s = "")
                 else dict[word].push_back(meaning);
             }
         }
-        if(oldMeaning == dict[word]) return;
-        DIR *dir;
-        dirent *entry;
-        dir = opendir("Dictionaries");
-        if(!dir) {
-            string endProgram = "\ndictionary.cpp -> строка " + to_string(__LINE__);
-            perror(endProgram.c_str());
-            exit(-1);
-        }
-        string path;
-        while((entry = readdir(dir)) != nullptr) {
-            path = entry->d_name;
-            if(path == "." || path == ".." || path == "all.txt" ||
-               "Dictionaries/" + path == file || path == "__excluded__.txt") continue;
-            if(path.substr(path.size() - 4) != ".txt") {
-                DIR *innerDir = opendir(("Dictionaries/" + path).c_str());
-                if(!innerDir) {
-                    string endProgram = "\ndictionary.cpp -> строка " + to_string(__LINE__);
-                    perror(endProgram.c_str());
-                    exit(-1);
-                }
-                dirent *innerEntry;
-                string innerPath;
-                while((innerEntry = readdir(innerDir)) != nullptr) {
-                    innerPath = innerEntry->d_name;
-                    if(innerPath == "." || innerPath == ".." || innerPath == "all.txt" || innerPath.substr(innerPath.size() - 4) != ".txt")
-                        continue;
-                    innerPath.erase(innerPath.size() - 4);
-                    Dictionary *innerDic = new Dictionary(path + "/" + innerPath);
-                    if(innerDic->dict.find(word) != innerDic->dict.end()) {
-                        innerDic->dict[word] = dict[word];
-                        addToFile(*innerDic, 0);
+        if(oldMeaning != dict[word]) {
+            DIR *dir;
+            dirent *entry;
+            dir = opendir("Dictionaries");
+            if(!dir) {
+                string endProgram = "\ndictionary.cpp -> строка " + to_string(__LINE__);
+                perror(endProgram.c_str());
+                exit(-1);
+            }
+            string path;
+            while((entry = readdir(dir)) != nullptr) {
+                path = entry->d_name;
+                if(path == "." || path == ".." || path == "all.txt" ||
+                   "Dictionaries/" + path == file || path == "__excluded__.txt") continue;
+                if(path.substr(path.size() - 4) != ".txt") {
+                    DIR *innerDir = opendir(("Dictionaries/" + path).c_str());
+                    if(!innerDir) {
+                        string endProgram = "\ndictionary.cpp -> строка " + to_string(__LINE__);
+                        perror(endProgram.c_str());
+                        exit(-1);
                     }
-                    delete innerDic;
+                    dirent *innerEntry;
+                    string innerPath;
+                    while((innerEntry = readdir(innerDir)) != nullptr) {
+                        innerPath = innerEntry->d_name;
+                        if(innerPath == "." || innerPath == ".." || innerPath == "all.txt" || innerPath.substr(innerPath.size() - 4) != ".txt")
+                            continue;
+                        innerPath.erase(innerPath.size() - 4);
+                        Dictionary *innerDic = new Dictionary(path + "/" + innerPath);
+                        if(innerDic->dict.find(word) != innerDic->dict.end()) {
+                            innerDic->dict[word] = dict[word];
+                            addToFile(*innerDic, 0);
+                        }
+                        delete innerDic;
+                    }
+                    continue;
                 }
-                continue;
+                path.erase(path.size() - 4);
+                Dictionary *temp = new Dictionary(path);
+                if(temp->dict.find(word) != temp->dict.end()) {
+                    temp->dict[word] = dict[word];
+                    addToFile(*temp, 0);
+                }
+                delete temp;
             }
-            path.erase(path.size() - 4);
-            Dictionary *temp = new Dictionary(path);
-            if(temp->dict.find(word) != temp->dict.end()) {
-                temp->dict[word] = dict[word];
-                addToFile(*temp, 0);
-            }
-            delete temp;
+            if(!wordIsLocal) dict.erase(dict.find(word));
         }
-        if(!wordIsLocal) dict.erase(dict.find(word));
+        structCursorInfo.bVisible = FALSE;
+        SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &structCursorInfo);
     }
 }
 

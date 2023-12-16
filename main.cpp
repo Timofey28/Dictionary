@@ -389,9 +389,6 @@ int main()
     char ch;
     string folderWriting, fileWriting;
     do {
-        GetConsoleCursorInfo(hConsole, &structCursorInfo);
-        structCursorInfo.bVisible = FALSE;
-        SetConsoleCursorInfo(hConsole, &structCursorInfo);
         system("cls");
         path = d.getFileName().substr(13, d.getFileName().size() - 17);
         if(excluded.find(path) == excluded.end()) d.setColor(14);
@@ -502,6 +499,11 @@ int main()
                       break;
             case -28:
             case 'l': if(d.getFileName() != "Dictionaries/" + d.getFolder() + "all.txt") d.showLastAddedWord();
+                      break;
+            case -18:
+            case 'j': if(structCursorInfo.bVisible == TRUE) structCursorInfo.bVisible = FALSE;
+                      else structCursorInfo.bVisible = TRUE;
+                      SetConsoleCursorInfo(hConsole, &structCursorInfo);
                       break;
             default:  break;
         }
