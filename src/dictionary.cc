@@ -1,9 +1,12 @@
 #include "dictionary.h"
-#include <windows.h>
+#include "folder_info.h"
+#include <iomanip>
 #include <conio.h>
 #include <dirent.h>
 using namespace std;
+
 extern set<string> excluded;
+extern FolderInfo folderInfo;
 
 Dictionary::Dictionary(string file_name)
 {
@@ -13,22 +16,132 @@ Dictionary::Dictionary(string file_name)
     ofstream f(file, ios::app);
     f.close();
 
-    readDic(file, dict);
+    ReadDic(file, dict);
     if(file == "Dictionaries/all.txt") return;
-    readDic("Dictionaries/all.txt", all_dict);
+    ReadDic("Dictionaries/all.txt", all_dict);
     for(auto it = dict.begin(); it != dict.end(); ++it) {
         auto del = all_dict.find(it->first);
         if(del != all_dict.end()) all_dict.erase(del);
     }
-    if(innerAll_file == "") return;
-    readDic(innerAll_file, innerAll_dict);
+
+    if(folder == "") return;
+    ReadDic(innerAll_file, innerAll_dict);
     for(auto it = dict.begin(); it != dict.end(); ++it) {
         auto del = innerAll_dict.find(it->first);
         if(del != innerAll_dict.end()) innerAll_dict.erase(del);
     }
 }
 
-pair<char, char> Dictionary::enterWord(string& meaning, bool isAdding)
+void Dictionary::InterestingInfo()
+{
+    int nConsoleWidth = getScreenWH().first;
+    int nConsoleHeight = getScreenWH().second;
+    int highestPossibleColumn = nConsoleHeight - 4;
+    map<char, int> frequency;
+    for(char c = 'a'; c <= 'z'; c++) frequency[c] = 0;
+    for(auto it = dict.begin(); it != dict.end(); ++it) {
+        frequency[it->first[0]]++;
+//        for(int i = 1; i < it->first.size(); ++i) {
+//            if(!ispunct(it->first[i]) && !isspace(it->first[i])) frequency[it->first[i]]++;
+//        }
+    }
+    int greatestFreq = 0;
+    for(auto it = frequency.begin(); it != frequency.end(); ++it) greatestFreq = max(greatestFreq, it->second);
+    map<char, int> barHeight;
+    for(auto it = frequency.begin(); it != frequency.end(); ++it) {
+        int currentHeight = round((double) it->second * highestPossibleColumn / greatestFreq);
+        barHeight[it->first] = currentHeight;
+    }
+
+//    system("cls");
+//    setPosition(7, nConsoleHeight - 2);
+//    for(char c = 'a'; c < 'z'; c++) cout << c << "  ";
+//    cout << 'z';
+//    int x = 1,
+//        y = nConsoleHeight - 2;
+//    for(int i = 1; i < highestPossibleColumn; ++i) {
+//        setPosition(x, y - i);
+//        cout << setw(4);
+//        if(i % 3 == 0) {
+//            cout << round((double) i * greatestFreq / highestPossibleColumn);
+//            _setmode(_fileno(stdout), _O_U16TEXT);
+//            wcout << " " << wstring(78, (wchar_t) 0x02D9);
+//            _setmode(_fileno(stdout), _O_TEXT);
+//        }
+//        else cout << "|";
+//    }
+//    setPosition(x, y - highestPossibleColumn);
+//    cout << setw(4) << greatestFreq;
+//    _setmode(_fileno(stdout), _O_U16TEXT);
+//    wcout << " " << wstring(78, (wchar_t) 0x02D9);
+//    _setmode(_fileno(stdout), _O_TEXT);
+//    setPosition(x, y - highestPossibleColumn - 1);
+//    cout << setw(4) << (char) 24;  // стрелка вверх
+//
+//    setColor(255);
+//    for(auto it = barHeight.begin(); it != barHeight.end(); ++it) {
+//        x = 7 + 3 * (it->first - 'a');
+//        y = nConsoleHeight - 3;
+//        for(int i = 0; i < it->second; ++i) {
+//            setPosition(x, y - i);
+//            cout << "ww";
+//        }
+//
+//        if(!it->second && frequency[it->first]) {
+//            setPosition(x, y);
+//            setColor(WHITE);
+//            cout << "__";
+//            setColor(255);
+//        }
+//    }
+//    setColor(WHITE);
+//    _getch();
+
+    system("cls");
+    setPosition(8, nConsoleHeight - 2);
+    for(char c = 'a'; c < 'z'; c++) cout << c << "  ";
+    cout << 'z';
+    int x = 0,
+        y = nConsoleHeight - 2;
+    for(int i = 1; i < highestPossibleColumn; ++i) {
+        setPosition(x, y - i);
+        if(i % 3 == 0) {
+            cout << setw(5) << round((double) i * greatestFreq / highestPossibleColumn);
+            _setmode(_fileno(stdout), _O_U16TEXT);
+            wcout << "|" << wstring(79, (wchar_t) 0x02D9);
+            _setmode(_fileno(stdout), _O_TEXT);
+        }
+        else cout << "     |";
+    }
+    setPosition(x, y - highestPossibleColumn);
+    cout << setw(5) << greatestFreq;
+    _setmode(_fileno(stdout), _O_U16TEXT);
+    wcout << "|" << wstring(79, (wchar_t) 0x02D9);
+    _setmode(_fileno(stdout), _O_TEXT);
+    setPosition(x + 5, y - highestPossibleColumn - 1);
+    cout << (char) 24;  // стрелка вверх
+
+    setColor(255);
+    for(auto it = barHeight.begin(); it != barHeight.end(); ++it) {
+        x = 8 + 3 * (it->first - 'a');
+        y = nConsoleHeight - 3;
+        for(int i = 0; i < it->second; ++i) {
+            setPosition(x, y - i);
+            cout << "ww";
+        }
+
+        if(!it->second && frequency[it->first]) {
+            setPosition(x, y);
+            setColor(WHITE);
+            cout << "__";
+            setColor(255);
+        }
+    }
+    setColor(WHITE);
+    _getch();
+}
+
+pair<char, char> Dictionary::EnterWord(string& meaning, bool isAdding)
 {
     meaning = "";
     char input[100];
@@ -95,7 +208,7 @@ pair<char, char> Dictionary::enterWord(string& meaning, bool isAdding)
     }
 }
 
-void Dictionary::print()
+void Dictionary::Print()
 {
     system("cls");
     char choice;
@@ -111,10 +224,10 @@ void Dictionary::print()
         if(dict[word].size() == 1 && dict[word][0] == " ") {
             if(lineBreak) cout << "\n";
             else lineBreak = 1;
-            printAWord(word, 0, "", 11);
+            PrintAWord(word, 0, "", SEA_WAVE);
         }
         else {
-            printAWord(word, 0, "", 10);
+            PrintAWord(word, 0, "", GREEN);
             lineBreak = 0;
         }
     }
@@ -132,7 +245,7 @@ void Dictionary::print()
     bool up = 0;
     COORD coord = getPos();
     int downY = coord.Y, leftX = coord.X - 1;
-    setColor(0);
+    setColor(BLACK);
     while((choice = _getch()) != 13) {
         coord.X = leftX;
         if(!SetConsoleCursorPosition(hWndConsole, coord))
@@ -189,10 +302,10 @@ void Dictionary::print()
             }
         }
     }
-    setColor(15);
+    setColor(WHITE);
 }
 
-void Dictionary::printOnlyEnglish()
+void Dictionary::PrintOnlyEnglish()
 {
     char filler = ' ';
     int space_between_columns = 4;
@@ -270,6 +383,7 @@ void Dictionary::printOnlyEnglish()
         if(columns_plus1) k++;
         int col_number, bar = 0;
         for(int i = 0; i < k; ++i) {
+            if(_kbhit() && _getch() == 27) return;
             cout << "\n\t";
             if(columns_plus1 && i == k - 1)
                 columns = columns_plus1;
@@ -301,7 +415,7 @@ void Dictionary::printOnlyEnglish()
         structCursorInfo.bVisible = FALSE;
         SetConsoleCursorInfo(hConsole, &structCursorInfo);
         bool up = 1;
-        setColor(0);
+        setColor(BLACK);
         char choice;
         while((choice = _getch()) != 13) {
             if(choice == 'k' || choice == -85)      goto arrowUp_printOnlyEnglish;
@@ -352,7 +466,7 @@ void Dictionary::printOnlyEnglish()
                 }
             }
         }
-        setColor(15);
+        setColor(WHITE);
         return;
     }
     for(auto it = dict.begin(); it != dict.end(); ++it) {
@@ -366,7 +480,7 @@ void Dictionary::printOnlyEnglish()
     cin.get();
 }
 
-string Dictionary::modifyString(string s, int width, int indent) // indent - расстояние от начала слова до
+string Dictionary::ModifyString(string s, int width, int indent) // indent - расстояние от начала слова до
 {                                                                // начала значения
     width -= indent;
     if(s.size() <= width) return s;
@@ -391,7 +505,7 @@ string Dictionary::modifyString(string s, int width, int indent) // indent - р�
     return s;
 }
 
-void Dictionary::printAWord(string &word, int spaces_amount, string toUpper, int color, bool from_all_dict)
+void Dictionary::PrintAWord(string &word, int spaces_amount, string toUpper, Colors color, bool from_all_dict)
 { // само слово, длина отступа не считая первых 8 пробелов (используется только в тесте)
 // string toUpper - какую часть слова надо подкрасить (используется только в поиске)
 // color - цвет слова; from_all_dict - глобальный/локальный поиск
@@ -416,42 +530,42 @@ void Dictionary::printAWord(string &word, int spaces_amount, string toUpper, int
     for(int i = 0; i < s.size(); ++i)
         if(s[i] == '_') s[i] = ' ';
     string spaces(spaces_amount, ' ');
-    if(temp[word].size() == 1 && temp[word][0] == " ") s = modifyString(s, width, spaces_amount);
+    if(temp[word].size() == 1 && temp[word][0] == " ") s = ModifyString(s, width, spaces_amount);
     if(toUpper.size()) {
         setColor(color);
         string normal_color = s.substr(0, s.find(toUpper));
         s.erase(0, s.find(toUpper));
         cout << "\n\t" << spaces << normal_color;
-        setColor(6);
+        setColor(GOLD);
         string highlight = s.substr(0, toUpper.size());
         s.erase(0, toUpper.size());
         cout << highlight;
         setColor(color);
         cout << s;
         if(!(temp[word].size() == 1 && temp[word][0] == " ")) cout << " --";
-        setColor(15);
+        setColor(WHITE);
     }
     else {
         setColor(color);
         cout << "\n\t" << spaces << s;
-        setColor(15);
+        setColor(WHITE);
         if(!(temp[word].size() == 1 && temp[word][0] == " ")) cout << " --";
     }
     string whitespaces(word.size() + 4 + spaces_amount, ' ');
     int num = 1;
     if(temp[word].size() == 1 && temp[word][0] != " ") {
-        cout << modifyString(temp[word][0], width, word.size() + 4 + spaces_amount);
+        cout << ModifyString(temp[word][0], width, word.size() + 4 + spaces_amount);
     }
     else if(temp[word].size() > 1) {
-        cout << " 1)" << modifyString(temp[word][0], width, word.size() + 7 + spaces_amount);
+        cout << " 1)" << ModifyString(temp[word][0], width, word.size() + 7 + spaces_amount);
         while(num < temp[word].size()) {
             cout << "\n\t" << whitespaces << num+1 << ')';
-            cout << modifyString(temp[word][num++], width, word.size() + 7 + spaces_amount);
+            cout << ModifyString(temp[word][num++], width, word.size() + 7 + spaces_amount);
         }
     }
 }
 
-void Dictionary::add()
+void Dictionary::Add()
 {
     system("cls");
     string word, meaning, temp;
@@ -470,33 +584,31 @@ void Dictionary::add()
     strcpy(c, word.c_str());
     OemToCharA(c, c);
     word = c;
-    while(word[0] == ' ') word.erase(0, 1);
-    while(word.back() == ' ') word.pop_back();
+    GetRidOfSpaces(word);
     if(word == "") return;
     if(dict.find(word) != dict.end()) {
         system("cls");
         cout << "\n\tДанное слово уже есть в этом словаре:\n";
-        printAWord(word, 0, "", 10);
-        cout << "\n\n\n\tДобавить новые значения?  ";
-        setColor(11); cout << "[Y/n]"; setColor(15);
+        PrintAWord(word, 0, "", GREEN);
+        cout << "\n\n\n\tДобавить новые значения?";
+        setColor(SEA_WAVE);
+        cout << "  [Y/n]";
+        setColor(WHITE);
         vector<string> startingMeaning;
-        if(cin.peek() == '\n') goto only_yes_or_no;
-        cin.ignore();
-        if(cin.peek() != 170 && cin.peek() != 114 && cin.peek() != 82 && cin.peek() != 138) // к, r, R, К соотв.
-            do {
-                pair<char, char> p = enterWord(meaning, 1);
-                startingMeaning.push_back(meaning);
-                if(p.first == 'r') break;
-            }while(1);
-        only_yes_or_no:
-        cin.sync();
-        c[0] = _getch();
-        OemToCharA(c, c);
-        c[0] = tolower(c[0]);
-        if(c[0] == 110 || c[0] == -14) return; // (n || т)
-        else if(c[0] != 121 && c[0] != -19) goto only_yes_or_no; // (!y && !н)
+        while(cin.peek() == ' ') cin.ignore();
+        if(cin.peek() != '\n') {
+            cin.ignore();
+            if(cin.peek() != 'r' && cin.peek() != 170 && cin.peek() != 'R' && cin.peek() != 138) {
+                do {
+                    pair<char, char> p = EnterWord(meaning, 1);
+                    startingMeaning.push_back(meaning);
+                    if(p.first == 'r') break;
+                }while(1);
+            }
+        }
+        if(!YesOrNo()) return;
         if(startingMeaning.size()) dict[word] = startingMeaning;
-        addSomeMeanings(word);
+        AddSomeMeanings(word);
         return;
     }
     else if(all_dict.find(word) != all_dict.end()) {
@@ -507,17 +619,17 @@ void Dictionary::add()
             startingMeaning = all_dict[word];
             system("cls");
             cout << "\n\tДанное слово уже есть в общем словаре:\n";
-            printAWord(word, 0, "", 10, 1);
-            cout << "\n\n\n\tДобавить его сюда тоже                     "; setColor(11); cout << "[y]"; setColor(15);
-            cout <<     "\n\tПосмотреть в каких словарях оно находится  "; setColor(11); cout << "[t]"; setColor(15);
-            cout <<     "\n\tОставить как есть                          "; setColor(11); cout << "[n]"; setColor(15);
+            PrintAWord(word, 0, "", GREEN, 1);
+            cout << "\n\n\n\tДобавить его сюда тоже                     "; setColor(SEA_WAVE); cout << "[y]"; setColor(WHITE);
+            cout <<     "\n\tПосмотреть в каких словарях оно находится  "; setColor(SEA_WAVE); cout << "[t]"; setColor(WHITE);
+            cout <<     "\n\tОставить как есть                          "; setColor(SEA_WAVE); cout << "[n]"; setColor(WHITE);
             only_yes_or_no3:
             c[0] = _getch();
             OemToCharA(c, c);
             c[0] = tolower(c[0]);
             if(c[0] == 110 || c[0] == -14) return; // n || т
             if(c[0] == 116 || c[0] == -27) { // t || е
-                int res = determine(word);
+                int res = Determine(word);
                 if(!res) return;
                 else if(res == 1) goto again1;
             }
@@ -531,7 +643,7 @@ void Dictionary::add()
         else {
             string mnRightAfterWord = c;
             do {
-                pair<char, char> p = enterWord(meaning, 1);
+                pair<char, char> p = EnterWord(meaning, 1);
                 if(mnRightAfterWord.size()) {
                     meaning = " " + mnRightAfterWord + meaning;
                     mnRightAfterWord = "";
@@ -546,13 +658,13 @@ void Dictionary::add()
         again2:
         system("cls");
         cout << "\n\tДанное слово уже есть в общем словаре:\n";
-        printAWord(word, 0, "", 10, 1);
-        cout << "\n\n\n\tДобавить его сюда тоже                     "; setColor(11); cout << "[y]"; setColor(15);
+        PrintAWord(word, 0, "", GREEN, 1);
+        cout << "\n\n\n\tДобавить его сюда тоже                     "; setColor(SEA_WAVE); cout << "[y]"; setColor(WHITE);
         if(startingMeaning != all_dict[word]) {
-            cout << "\n\tДобавить с текущими значениями             "; setColor(11); cout << "[s]"; setColor(15);
+            cout << "\n\tДобавить с текущими значениями             "; setColor(SEA_WAVE); cout << "[s]"; setColor(WHITE);
         }
-        cout <<     "\n\tПосмотреть в каких словарях оно находится  "; setColor(11); cout << "[t]"; setColor(15);
-        cout <<     "\n\tОставить как есть                          "; setColor(11); cout << "[n]"; setColor(15);
+        cout <<     "\n\tПосмотреть в каких словарях оно находится  "; setColor(SEA_WAVE); cout << "[t]"; setColor(WHITE);
+        cout <<     "\n\tОставить как есть                          "; setColor(SEA_WAVE); cout << "[n]"; setColor(WHITE);
         only_yes_or_no2:
         cin.sync();
         c[0] = _getch();
@@ -565,7 +677,7 @@ void Dictionary::add()
             return;
         }
         else if(c[0] == 116 || c[0] == -27) { // (t || е)
-            int res = determine(word);
+            int res = Determine(word);
             if(!res) return;
             else if(res == 1) goto again2;
         }
@@ -574,14 +686,14 @@ void Dictionary::add()
         addHereAlso:
         vector<string> oldMeaning = dict[word];
         dict[word] = startingMeaning;
-        addSomeMeanings(word);
+        AddSomeMeanings(word);
         if(startingMeaning != oldMeaning) {
             // изменяем значения этого слова во всех словарях
             DIR *dir;
             dirent *entry;
             dir = opendir("Dictionaries");
             if(!dir) {
-                string endProgram = "\ndictionary.cpp -> строка " + to_string(__LINE__);
+                string endProgram = "\ndictionary.cc -> строка " + to_string(__LINE__);
                 perror(endProgram.c_str());
                 exit(-1);
             }
@@ -606,7 +718,7 @@ void Dictionary::add()
     while(1) {
         system("cls");
         cout << "\n\tWrite a meaning: ";
-        pair<char, char> p = enterWord(meaning, 1);
+        pair<char, char> p = EnterWord(meaning, 1);
         dict[word].push_back(meaning);
         if(p.first == 'r') return;
         if(p.first == 'b') {
@@ -617,7 +729,7 @@ void Dictionary::add()
     }
 }
 
-void Dictionary::addSomeMeanings(string s = "")
+void Dictionary::AddSomeMeanings(string s = "")
 {
     system("cls");
     string word, temp, meaning;
@@ -632,14 +744,14 @@ void Dictionary::addSomeMeanings(string s = "")
         cin.getline(c, 200);
         OemToCharA(c, c);
         word = c;
-        getRidOfSpaces(word);
+        GetRidOfSpaces(word);
         if(!word.size()) {
             cout << "\n\tWord to change: ";
             cin.sync();
             cin.getline(c, 200);
             OemToCharA(c, c);
             word = c;
-            getRidOfSpaces(word);
+            GetRidOfSpaces(word);
         }
         if(word == "") return;
         if(word.size() > 1 && word[0] == '/') word.erase(0, 1);
@@ -664,31 +776,36 @@ void Dictionary::addSomeMeanings(string s = "")
     system("cls");
     if(dict.find(word) == dict.end()) {
         if(file == "Dictionaries/all.txt") {
-            string endProgram = "\ndictionary.cpp -> строка " + to_string(__LINE__) +
+            string endProgram = "\ndictionary.cc -> строка " + to_string(__LINE__) +
             "\nПоздравляю, этого не должно было произойти! Удачи в поиске ошибки :D";
             perror(endProgram.c_str());
             exit(-1);
         }
         cout << "\n\tNo such word. Wanna add?";
-        string choice;
-        cin.sync();
-        getline(cin, choice);
-        if(choice == "d" || choice == "ў") {
+        setColor(SEA_WAVE);
+        cout << "  [Y/n]";
+        setColor(WHITE);
+        if(YesOrNo()) {
             dict[word].push_back(" ");
-            addSomeMeanings(word);
+            last_word.push(word);
+            AddSomeMeanings(word);
         }
     }
     else {
+        bool cursorIsVisible = 1;
         CONSOLE_CURSOR_INFO structCursorInfo;
         GetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &structCursorInfo);
-        structCursorInfo.bVisible = TRUE;
-        SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &structCursorInfo);
+        if(structCursorInfo.bVisible != TRUE) {
+            cursorIsVisible = 0;
+            structCursorInfo.bVisible = TRUE;
+            SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &structCursorInfo);
+        }
         vector<string> oldMeaning = dict[word];
         while(1) {
             system("cls");
-            printAWord(word);
+            PrintAWord(word);
             cout << "\n\n\tWrite a meaning: ";
-            pair<char, char> p = enterWord(meaning);
+            pair<char, char> p = EnterWord(meaning);
             if(p.first == 'r') { // выход/добавление нового значения и затем сразу выход
                 if(isdigit(p.second)) {
                     int k = min((int) dict[word].size(), p.second - 49);
@@ -804,7 +921,7 @@ void Dictionary::addSomeMeanings(string s = "")
             dirent *entry;
             dir = opendir("Dictionaries");
             if(!dir) {
-                string endProgram = "\ndictionary.cpp -> строка " + to_string(__LINE__);
+                string endProgram = "\ndictionary.cc -> строка " + to_string(__LINE__);
                 perror(endProgram.c_str());
                 exit(-1);
             }
@@ -816,7 +933,7 @@ void Dictionary::addSomeMeanings(string s = "")
                 if(path.substr(path.size() - 4) != ".txt") {
                     DIR *innerDir = opendir(("Dictionaries/" + path).c_str());
                     if(!innerDir) {
-                        string endProgram = "\ndictionary.cpp -> строка " + to_string(__LINE__);
+                        string endProgram = "\ndictionary.cc -> строка " + to_string(__LINE__);
                         perror(endProgram.c_str());
                         exit(-1);
                     }
@@ -846,12 +963,14 @@ void Dictionary::addSomeMeanings(string s = "")
             }
             if(!wordIsLocal) dict.erase(dict.find(word));
         }
-        structCursorInfo.bVisible = FALSE;
-        SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &structCursorInfo);
+        if(!cursorIsVisible) {
+            structCursorInfo.bVisible = FALSE;
+            SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &structCursorInfo);
+        }
     }
 }
 
-void Dictionary::findAWord(bool findAmongAll)
+void Dictionary::FindAWord(bool findAmongAll)
 {
     vector<bool> lettersEntered; // 1 - english, 0 - russian
     char c[2];
@@ -859,7 +978,7 @@ void Dictionary::findAWord(bool findAmongAll)
     string word = "";
     if(cin.peek() != '\n') {
         getline(cin, word);
-        getRidOfSpaces(word);
+        GetRidOfSpaces(word);
         for(int i = 0; i < word.size(); ++i) {
             c[0] = word[i];
             OemToCharA(c, c);
@@ -910,8 +1029,8 @@ void Dictionary::findAWord(bool findAmongAll)
     int wordsAmountUpper, wordsAmountLower;
     string wordUpper, wordLower;
     if(word.size()) goto firstTime;
-    if(findAmongAll || file == "Dictionaries/all.txt") setColor(5);
-    else setColor(7);
+    if(findAmongAll || file == "Dictionaries/all.txt") setColor(PURPLE);
+    else setColor(GRAY);
     cout << "\n\tInput: ";
     char sym;
     cin.sync();
@@ -920,7 +1039,7 @@ void Dictionary::findAWord(bool findAmongAll)
         if(sym == 13 || sym == 27) return; // enter || escape
         else if(sym == 9) { // tab
             if(wordsAmountUpper == 1 || wordsAmountUpper && wordsAmountLower != 1) {
-                int res = determine(wordUpper);
+                int res = Determine(wordUpper);
                 if(res == 1) {
                     wordsAmountUpper = 0;
                     wordsAmountLower = 0;
@@ -929,7 +1048,7 @@ void Dictionary::findAWord(bool findAmongAll)
                 else if(!res) return;
             }
             else if(wordsAmountLower) {
-                int res = determine(wordLower);
+                int res = Determine(wordLower);
                 if(res == 1) {
                     wordsAmountUpper = 0;
                     wordsAmountLower = 0;
@@ -1044,15 +1163,15 @@ void Dictionary::findAWord(bool findAmongAll)
         }
         firstTime:
         system("cls");
-        if(findAmongAll || file == "Dictionaries/all.txt") setColor(5);
-        else setColor(7);
+        if(findAmongAll || file == "Dictionaries/all.txt") setColor(PURPLE);
+        else setColor(GRAY);
         cout << "\n\tInput: ";
         string wordToShow = word;
         for(int i = 0; i < wordToShow.size(); ++i)
             if(wordToShow[i] == '_') wordToShow[i] = ' ';
-        setColor(6);
+        setColor(GOLD);
         cout << wordToShow;
-        setColor(15);
+        setColor(WHITE);
         if(!word.size()) continue;
         bool no_words = 1;
         cout << "\n";
@@ -1063,7 +1182,7 @@ void Dictionary::findAWord(bool findAmongAll)
                 if(_kbhit()) continue;
                 string temp = it->first;
                 if(temp.find(word) == 0) {
-                    printAWord(temp, 0, "", 11, findAmongAll);
+                    PrintAWord(temp, 0, "", SEA_WAVE, findAmongAll);
                     no_words = 0;
                     wordsAmountUpper++;
                     if(wordUpper == "") wordUpper = temp;
@@ -1076,7 +1195,7 @@ void Dictionary::findAWord(bool findAmongAll)
                 if(_kbhit()) continue;
                 string temp = it->first;
                 if(temp.find(word) != string::npos && temp.find(word)) {
-                    printAWord(temp, 0, word, 7, findAmongAll);
+                    PrintAWord(temp, 0, word, GRAY, findAmongAll);
                     no_words = 0;
                     wordsAmountLower++;
                     if(wordLower == "") wordLower = temp;
@@ -1089,10 +1208,10 @@ void Dictionary::findAWord(bool findAmongAll)
                 if(_kbhit()) continue;
                 vector<string> meaning = it->second;
                 if(meaning.size() == 1 && meaning[0] != " ")
-                    meaning[0] = modifyString(meaning[0], width, it->first.size() + 4);
+                    meaning[0] = ModifyString(meaning[0], width, it->first.size() + 4);
                 else if(meaning.size() > 1)
                     for(int i = 0; i < meaning.size(); ++i)
-                        meaning[i] = modifyString(meaning[i], width, it->first.size() + 7);
+                        meaning[i] = ModifyString(meaning[i], width, it->first.size() + 7);
                 for(int i = 0; i < meaning.size(); ++i) {
                     int pos = meaning[i].find(word);
                     if(pos != string::npos && pos != 0) {
@@ -1102,11 +1221,11 @@ void Dictionary::findAWord(bool findAmongAll)
                         if(wordUpper == "") wordUpper = key;
                         for(int j = 0; j < key.size(); ++j)
                             if(key[j] == '_') key[j] = ' ';
-                        setColor(11);
+                        setColor(SEA_WAVE);
                         cout << "\n\t" << key;
-                        setColor(15);
+                        setColor(WHITE);
                         cout << " --";
-                        setColor(7);
+                        setColor(GRAY);
                         string whitespaces(it->first.size() + 12, ' ');
                         int spacesOneMeaning = it->first.size() + 12,
                             spacesFewMeanings = it->first.size() + 15;
@@ -1115,9 +1234,9 @@ void Dictionary::findAWord(bool findAmongAll)
                             if(pos == string::npos) cout << meaning[0];
                             else {
                                 cout << meaning[0].substr(0, pos);
-                                setColor(6);
+                                setColor(GOLD);
                                 cout << meaning[0].substr(pos, word.size());
-                                setColor(7);
+                                setColor(GRAY);
                                 cout << meaning[0].substr(pos + word.size());
                             }
                         }
@@ -1126,9 +1245,9 @@ void Dictionary::findAWord(bool findAmongAll)
                             if(pos == string::npos) cout << " 1)" << meaning[0];
                             else {
                                 cout << " 1)" << meaning[0].substr(0, pos);
-                                setColor(6);
+                                setColor(GOLD);
                                 cout << meaning[0].substr(pos, word.size());
-                                setColor(7);
+                                setColor(GRAY);
                                 cout << meaning[0].substr(pos + word.size());
                             }
                             for(int j = 1; j < meaning.size(); ++j) {
@@ -1137,9 +1256,9 @@ void Dictionary::findAWord(bool findAmongAll)
                                 if(pos == string::npos) cout << meaning[j];
                                 else {
                                     cout << meaning[j].substr(0, pos);
-                                    setColor(6);
+                                    setColor(GOLD);
                                     cout << meaning[j].substr(pos, word.size());
-                                    setColor(7);
+                                    setColor(GRAY);
                                     cout << meaning[j].substr(pos + word.size());
                                 }
                             }
@@ -1149,10 +1268,10 @@ void Dictionary::findAWord(bool findAmongAll)
                     }
                 }
             }
-            setColor(15);
+            setColor(WHITE);
         }
         else {
-            cout << "\n\tShould be only one language";
+            cout << "\n\tMust be only one language";
             continue;
         }
 
@@ -1174,7 +1293,7 @@ void Dictionary::findAWord(bool findAmongAll)
     }
 }
 
-void Dictionary::getRidOf()
+void Dictionary::GetRidOf()
 {
     system("cls");
     string word;
@@ -1201,7 +1320,7 @@ void Dictionary::getRidOf()
         OemToCharA(c, c);
         word = c;
     }
-    getRidOfSpaces(word);
+    GetRidOfSpaces(word);
     for(int i = 0; i < word.size(); ++i)
         if(word[i] == ' ') word[i] = '_';
     bool leaveWordInAll = 0;
@@ -1210,7 +1329,7 @@ void Dictionary::getRidOf()
         while(word.find('*') != string::npos)
             word.replace(word.find('*'), 1, "");
         leaveWordInAll = 1;
-        getRidOfSpaces(word, '_');
+        GetRidOfSpaces(word, '_');
     }
     if(word.size() > 1 && word[0] == '/') word.erase(0, 1);
     else if(word == "ю" || word == ".") {
@@ -1219,7 +1338,12 @@ void Dictionary::getRidOf()
             last_word.pop();
         }
         else if(dict.size() == 1) word = dict.begin()->first;
-        else return;
+        else {
+            if(!dict.size()) cout << "\n\tNo words added yet";
+            else cout << "\n\tNo words added recently";
+            c[0] = _getch();
+            return;
+        }
     }
     auto it = dict.find(word);
     if(it == dict.end()) return;
@@ -1227,7 +1351,7 @@ void Dictionary::getRidOf()
     dict.erase(it);
 }
 
-bool Dictionary::examRightAnswer(vector<string> &answers, string answer)
+bool Dictionary::ExamRightAnswer(vector<string> &answers, string answer)
 {
     set<string> ans;
     while(answer.find(" ") != string::npos) {
@@ -1246,7 +1370,7 @@ bool Dictionary::examRightAnswer(vector<string> &answers, string answer)
     return 0;
 }
 
-void Dictionary::exam()
+void Dictionary::Exam()
 {
     mt19937 mersenne(static_cast<unsigned int>(time(0)));
     system("cls");
@@ -1297,7 +1421,7 @@ void Dictionary::exam()
         cin.getline(a, 255);
         OemToCharA(a, a);
         string temp(a);
-        getRidOfSpaces(temp);
+        GetRidOfSpaces(temp);
         answer = temp;
 
         if(answer == "all" || answer == "фдд") {
@@ -1322,14 +1446,14 @@ void Dictionary::exam()
             if(question_number <= 10) spaces_amount = 3;
             else if(question_number <= 100) spaces_amount = 4;
             else spaces_amount = 5;
-            printAWord(temp, spaces_amount);
+            PrintAWord(temp, spaces_amount);
             cout << "\n\n\t";
             choice = _getche();
             if(choice == 'f' || choice == ' ') right_ans++;
             continue;
         }
         else if(answer == "exit" || answer == "учше") return;
-        if(examRightAnswer(it->second, answer)) {
+        if(ExamRightAnswer(it->second, answer)) {
             system("cls");
             right_ans++;
             cout << "\n\t(" << right_ans << "/" << order.size() << " правильных ответов)\n";
@@ -1338,8 +1462,8 @@ void Dictionary::exam()
         if(question_number <= 10) spaces_amount = 3;
         else if(question_number <= 100) spaces_amount = 4;
         else spaces_amount = 5;
-        printAWord(temp, spaces_amount);
-        if(examRightAnswer(it->second, answer)) {
+        PrintAWord(temp, spaces_amount);
+        if(ExamRightAnswer(it->second, answer)) {
             cout << "\n\n\tВерно!\n\n\t";
             cin.sync();
             cin.get();
@@ -1377,69 +1501,62 @@ void Dictionary::exam()
     if(wrong.size()) cout << "\n\n\tНеверные ответы:\n";
     for(auto it = wrong.begin(); it != wrong.end(); ++it) {
         string s = it->first;
-        printAWord(s);
+        PrintAWord(s);
     }
     cout << "\n\t";
     cin.get();
 }
 
-bool Dictionary::remov()
+bool Dictionary::Remov()
 {
     string just_a_name = file;
-    just_a_name.erase(0, just_a_name.find('/') + 1);
+    just_a_name.erase(0, just_a_name.find("/") + 1);
     just_a_name.erase(just_a_name.size() - 4);
     if(just_a_name.substr(0, 7) == "papka__") {
         just_a_name.erase(0, 7);
         just_a_name.replace(just_a_name.find("/"), 1, " -> ");
     }
-    else just_a_name[0] = toupper(just_a_name[0]);
+    just_a_name[0] = toupper(just_a_name[0]);
     pathToDemonstration(just_a_name);
     char c[2];
     system("cls");
     cout << "\n\tДействительно удалить словарь \"" << just_a_name << "\"?";
-    setColor(11); cout << "\n\n\t[Y/n]"; setColor(15);
-    only_yes_or_no:
-    cin.sync();
-    c[0] = _getch();
-    OemToCharA(c, c);
-    c[0] = tolower(c[0]);
-    if(c[0] == 110 || c[0] == -14) return 0;  // (n || т)
-    else if(c[0] != 121 && c[0] != -19) goto only_yes_or_no;
-    writeInDic("Dictionaries/all.txt", all_dict);
-    if(innerAll_file.size()) writeInDic(innerAll_file, innerAll_dict);
+    setColor(SEA_WAVE);
+    cout << "\n\n\t[Y/n]";
+    setColor(WHITE);
+    if(!YesOrNo()) return 0;
+    WriteInDic("Dictionaries/all.txt", all_dict);
+    if(innerAll_file != "") WriteInDic(innerAll_file, innerAll_dict);
     remove(file.c_str());
-    file = "";
+    folderInfo.DeleteFile(file);
+    if(FileIsExcluded()) excluded.erase(file.substr(13, file.size() - 17));
+    file = innerAll_file;
+    if(file != "") return 0;
     return 1;
 }
 
 void addToFile(Dictionary &x, bool saveInAll)
 {
     if(x.file == "") return;
-    x.writeInDic(x.file, x.dict);
+    x.WriteInDic(x.file, x.dict);
     string xAllFile = "Dictionaries/all.txt";
     if(x.file == "Dictionaries/" + x.folder + "all.txt") return;
     if(saveInAll) {
         map<string, vector<string>> intermediate(x.all_dict);
         for(auto it = x.dict.begin(); it != x.dict.end(); ++it)
             intermediate[it->first] = it->second;
-        x.writeInDic(xAllFile, intermediate);
+        x.WriteInDic(xAllFile, intermediate);
     }
-    else x.writeInDic(xAllFile, x.all_dict);
+    else x.WriteInDic(xAllFile, x.all_dict);
     if(x.folder != "") {
         map<string, vector<string>> intermediate(x.innerAll_dict);
         for(auto it = x.dict.begin(); it != x.dict.end(); ++it)
             intermediate[it->first] = it->second;
-        x.writeInDic(x.innerAll_file, intermediate);
+        x.WriteInDic(x.innerAll_file, intermediate);
     }
 }
 
-void Dictionary::setColor(int color)
-{
-    HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    SetConsoleTextAttribute(hStdOut, (WORD) color);
-}
-
-int Dictionary::determine(string word = "")
+int Dictionary::Determine(string word = "")
 {
     string path;
     if(file != "Dictionary/all.txt") {
@@ -1470,7 +1587,7 @@ int Dictionary::determine(string word = "")
         OemToCharA(c, c);
         word = c;
     }
-    getRidOfSpaces(word);
+    GetRidOfSpaces(word);
     if(word == "") return 0;
     for(int i = 0; i < word.size(); ++i)
         if(word[i] == ' ') word[i] = '_';
@@ -1478,7 +1595,7 @@ int Dictionary::determine(string word = "")
     dirent *entry;
     dir = opendir("Dictionaries");
     if(!dir) {
-        string endProgram = "\ndictionary.cpp -> строка " + to_string(__LINE__);
+        string endProgram = "\ndictionary.cc -> строка " + to_string(__LINE__);
         perror(endProgram.c_str());
         exit(-1);
     }
@@ -1490,7 +1607,7 @@ int Dictionary::determine(string word = "")
         if(path.substr(path.size() - 4) != ".txt") {
             DIR *innerDir = opendir(("Dictionaries/" + path).c_str());
             if(!dir) {
-                string endProgram = "\ndictionary.cpp -> строка " + to_string(__LINE__);
+                string endProgram = "\ndictionary.cc -> строка " + to_string(__LINE__);
                 perror(endProgram.c_str());
                 exit(-1);
             }
@@ -1508,7 +1625,7 @@ int Dictionary::determine(string word = "")
                 Dictionary *innerDic = new Dictionary(rawPath + "/" + innerPath);
                 if(innerDic->dict.find(word) != innerDic->dict.end()) {
                     pathToDemonstration(innerPath);
-                    found[path + " -> " + innerPath] = innerDic->getSize();
+                    found[path + " -> " + innerPath] = innerDic->GetSize();
                 }
                 delete innerDic;
             }
@@ -1519,7 +1636,7 @@ int Dictionary::determine(string word = "")
         if(temp->dict.find(word) != temp->dict.end()) {
             pathToDemonstration(path);
             path[0] = toupper(path[0]);
-            found[path] = temp->getSize();
+            found[path] = temp->GetSize();
         }
         delete temp;
     }
@@ -1536,23 +1653,23 @@ int Dictionary::determine(string word = "")
             for(auto it = found.begin(); it != found.end(); ++it)
                 dots.push_back(string(maxSize - it->first.size(), '.'));
         }
-        setColor(10);
+        setColor(GREEN);
         cout << "\n\tFound in: (for " << (double) (finish - start) / CLOCKS_PER_SEC << "s)";
-        setColor(15);
+        setColor(WHITE);
         int index = 0, longestDictSize = 0; // длина числа количества слов в словаре (5 - 1, 12 - 2, 143 - 3)
         for(auto it = found.begin(); it != found.end(); ++it)
             longestDictSize = max(longestDictSize, numLength(it->second));
         for(auto it = found.begin(); it != found.end(); ++it) {
             cout << "\n\t\"" << it->first << "\" ";
-            setColor(7);
+            setColor(GRAY);
             cout << dots[index++] << string(longestDictSize - numLength(it->second), '.') << " " << it->second;
-            setColor(15);
+            setColor(WHITE);
         }
         cout << "\n";
-        printAWord(word, 0, "", 10, 1);
+        PrintAWord(word, 0, "", GREEN, 1);
         if(calledFromAdding) {
-            cout << "\n\n\n\tНазад           "; setColor(11); cout << "[b]"; setColor(15);
-            cout << "\n\tВ главное меню  "; setColor(11); cout << "[n]"; setColor(15);
+            cout << "\n\n\n\tНазад           "; setColor(SEA_WAVE); cout << "[b]"; setColor(WHITE);
+            cout << "\n\tВ главное меню  "; setColor(SEA_WAVE); cout << "[n]"; setColor(WHITE);
             while(1) {
                 c[0] = _getch();
                 OemToCharA(c, c);
@@ -1560,15 +1677,12 @@ int Dictionary::determine(string word = "")
                 if(c[0] == 'b' || c[0] == 'и') return 1;
             }
         }
-        cout << "\n\n\n\tWanna change something?  "; setColor(11); cout << "[Y/n]"; setColor(15);
-        only_yes_or_no:
-        cin.sync();
-        c[0] = _getch();
-        OemToCharA(c, c);
-        c[0] = tolower(c[0]);
-        if(c[0] == 110 || c[0] == -14) return 0; // (n || т)
-        else if(c[0] != 121 && c[0] != -19) goto only_yes_or_no;
-        addSomeMeanings(word);
+        cout << "\n\n\n\tWanna change anything?";
+        setColor(SEA_WAVE);
+        cout << "  [Y/n]";
+        setColor(WHITE);
+        if(!YesOrNo()) return 0;
+        AddSomeMeanings(word);
     }
     else {
         cout << "\n\tNo words found\n\n\t";
@@ -1578,35 +1692,11 @@ int Dictionary::determine(string word = "")
     return 0;
 }
 
-int amountOfLines(const vector<pair<bool, int>>& opened)
-{
-    int res = opened.size();
-    for(int i = 0; i < opened.size(); ++i) {
-        if(opened[i].first)
-            res += opened[i].second;
-    }
-    return res;
-}
-
-int cursorOnFolder(const vector<pair<bool, int>>& opened, int k)
-{
-    if(k == -1) return -1;
-    if(!k) return 0;
-    int numLine = 0;
-    for(int i = 1; i < opened.size(); ++i) {
-        if(opened[i - 1].first) numLine += opened[i - 1].second + 1;
-        else numLine++;
-        if(numLine == k) return i;
-        else if(numLine > k) return -1;
-    }
-    return -1;
-}
-
 int getDictionarySize(const string& path)
 {
     ifstream fin(path.c_str());
     if(!fin.is_open()) {
-        perror(("\ndictionary.cpp -> строка " + to_string(__LINE__)).c_str());
+        perror(("\ndictionary.cc -> строка " + to_string(__LINE__) + "\n" + path).c_str());
         exit(-1);
     }
     int ans = 0;
@@ -1619,13 +1709,13 @@ int getDictionarySize(const string& path)
     return ans;
 }
 
-void Dictionary::foldersHandler()
+void Dictionary::FoldersHandler()
 {
     system("cls");
     cout << "\n";
     string choice;
     getline(cin, choice);
-    getRidOfSpaces(choice);
+    GetRidOfSpaces(choice);
     bool out = 0;
     if(choice != "") out = 1;
     for(int i = 0; i < choice.size(); ++i)
@@ -1649,26 +1739,30 @@ void Dictionary::foldersHandler()
             }
             needInstructions = 0;
             string newFolderName = choice.substr(6);
-            getRidOfSpaces(newFolderName);
+            GetRidOfSpaces(newFolderName);
             if(newFolderName == "") goto thatsall;
             string folderName = newFolderName;
             demonstrationToPath(newFolderName);
             newFolderName = "Dictionaries/papka__" + newFolderName;
-            DIR *dir = opendir(newFolderName.c_str());
-            if(dir) {
-                closedir(dir);
-                cout << "The folder already exists\n\n";
+            if(folderInfo.FolderExists(newFolderName)) {
+                if(!out) {
+                    cout << '\a';
+                    setColor(RED);
+                    cout << "This folder already exists\n\n";
+                    setColor(WHITE);
+                }
                 goto thatsall;
             }
             mkdir(newFolderName.c_str());
             newFolderName += "/all.txt";
             ofstream f(newFolderName.c_str());
             f.close();
+            folderInfo.AddFolder(folderName);
             if(!out) {
                 cout << "Folder ";
-                setColor(6);
+                setColor(GOLD);
                 cout << folderName;
-                setColor(15);
+                setColor(WHITE);
                 cout << " was created\n\n";
             }
         }
@@ -1680,7 +1774,7 @@ void Dictionary::foldersHandler()
             needInstructions = 0;
             bool deleteFolderIAmInRightNow;
             string folderToDelete = choice.substr(6);
-            getRidOfSpaces(folderToDelete);
+            GetRidOfSpaces(folderToDelete);
             if(folderToDelete == "") goto thatsall;
             if(folderToDelete == "this") {
                 if(folder == "") goto thatsall;
@@ -1689,34 +1783,31 @@ void Dictionary::foldersHandler()
             }
             string folderName = folderToDelete;
             demonstrationToPath(folderToDelete);
-            if(folder != "" && folder.substr(7, folder.size() - 8) == folderToDelete)
-                deleteFolderIAmInRightNow = 1;
+            if(folder != "" && folder.substr(7, folder.size() - 8) == folderToDelete) deleteFolderIAmInRightNow = 1;
             else deleteFolderIAmInRightNow = 0;
             folderToDelete = "Dictionaries/papka__" + folderToDelete;
-            DIR *dir = opendir(folderToDelete.c_str());
-            if(!dir) {
+            if(!folderInfo.FolderExists(folderToDelete)) {
                 if(!out) {
-                    setColor(4);
+                    setColor(RED);
                     cout << "No such folder\n\n";
-                    setColor(15);
+                    setColor(WHITE);
                 }
                 goto thatsall;
             }
-            dirent *entry;
-            vector<string> filesLeft;
-            while((entry = readdir(dir)) != nullptr) {
-                string s = entry->d_name;
-                if(s != "." && s != "..") filesLeft.push_back(s);
-            }
-            closedir(dir);
+            vector<string> filesLeft = folderInfo.GetFilesFromFolder(folderToDelete);
             folderName[0] = toupper(folderName[0]);
             if(out) {
                 system("cls");
                 cout << "\n\t";
             }
             cout << "Действительно удалить папку ";
-            setColor(6); cout << folderName; setColor(15); cout << " ?";
-            setColor(11); cout << "  [Y/n]\n"; setColor(15);
+            setColor(GOLD);
+            cout << folderName;
+            setColor(WHITE);
+            cout << " ?";
+            setColor(SEA_WAVE);
+            cout << "  [Y/n]\n";
+            setColor(WHITE);
             if(filesLeft.size() > 1) {
                 if(out) cout << "\n";
                 cout << "\n";
@@ -1727,43 +1818,34 @@ void Dictionary::foldersHandler()
                 else cout << "ут словари:";
                 if(out) cout << "\n";
                 for(int i = 0; i < filesLeft.size(); ++i) {
-                    if(filesLeft[i] != "all.txt") {
-                        string s = filesLeft[i];
-                        s.erase(s.size() - 4);
-                        pathToDemonstration(s);
-                        setColor(4);
+                    if(filesLeft[i] != "all") {
+                        setColor(RED);
                         cout << "\n";
                         if(out) cout << "\t";
                         else cout << "    ";
                         cout << (char) 26 << ' ';
-                        setColor(7);
-                        cout << s;
+                        setColor(GRAY);
+                        cout << filesLeft[i];
                     }
                 }
-                setColor(15);
+                setColor(WHITE);
                 cout << "\n";
             }
-            only_yes_or_no:
-            char c[2];
-            cin.sync();
-            c[0] = _getch();
-            OemToCharA(c, c);
-            c[0] = tolower(c[0]);
-            if(c[0] == 110 || c[0] == -14) {
+            if(!YesOrNo()) {
                 if(!out) cout << "\n";
                 goto thatsall;
             }
-            else if(c[0] != 121 && c[0] != -19) goto only_yes_or_no;
             string path = file.substr(13, file.size() - 17);
             if(excluded.find(path) == excluded.end()) addToFile(*this, 1);
             else addToFile(*this, 0);
             for(int i = 0; i < filesLeft.size(); ++i) {
-                string source = folderToDelete + "/" + filesLeft[i];
+                demonstrationToPath(filesLeft[i]);
+                string source = folderToDelete + "/" + filesLeft[i] + ".txt";
                 if(filesLeft[i] == "all.txt") {
                     remove(source.c_str());
                     continue;
                 }
-                string destination = "Dictionaries/" + filesLeft[i];
+                string destination = "Dictionaries/" + filesLeft[i] + ".txt";
                 path = source.substr(13, source.size() - 17);
                 if(excluded.find(path) != excluded.end()) {
                     excluded.erase(path);
@@ -1785,9 +1867,9 @@ void Dictionary::foldersHandler()
             }
             if(!out) {
                 cout << "\nFolder ";
-                setColor(6);
+                setColor(GOLD);
                 cout << folderName;
-                setColor(15);
+                setColor(WHITE);
                 cout << " was successfully deleted\n\n";
             }
         }
@@ -1798,27 +1880,28 @@ void Dictionary::foldersHandler()
             }
             needInstructions = 0;
             if(folder != "" || file == "Dictionaries/all.txt") {
-                cout << '\a';
-                setColor(4);
-                if(folder != "") cout << "This dictionary is already in some folder\n\n";
-                else cout << "All dictionary can't be moved anywhere\n\n";
-                goto thatsall;
-            }
-            string folderName = choice.substr(6);
-            getRidOfSpaces(folderName);
-            if(folderName == "") goto thatsall;
-            demonstrationToPath(folderName);
-            folderName = "Dictionaries/papka__" + folderName;
-            DIR *dir = opendir(folderName.c_str());
-            if(!dir) {
                 if(!out) {
-                    setColor(4);
-                    cout << "No such folder\n\n";
-                    setColor(15);
+                    cout << '\a';
+                    setColor(RED);
+                    if(folder != "") cout << "This dictionary is already in some folder\n\n";
+                    else cout << "All dictionary can't be moved anywhere\n\n";
+                    setColor(WHITE);
                 }
                 goto thatsall;
             }
-            closedir(dir);
+            string folderName = choice.substr(6);
+            GetRidOfSpaces(folderName);
+            if(folderName == "") goto thatsall;
+            demonstrationToPath(folderName);
+            folderName = "Dictionaries/papka__" + folderName;
+            if(!folderInfo.FolderExists(folderName)) {
+                if(!out) {
+                    setColor(RED);
+                    cout << "No such folder\n\n";
+                    setColor(WHITE);
+                }
+                goto thatsall;
+            }
             folderName += file.substr(file.rfind("/")); // "Dictionaries/papka__test/film.txt"
             rename(file.c_str(), folderName.c_str());
             string path = file.substr(13, file.size() - 17);
@@ -1842,18 +1925,18 @@ void Dictionary::foldersHandler()
                 output_before_user_request[0] = toupper(output_before_user_request[0]);
                 pathToDemonstration(output_before_user_request);
                 cout << "Dictionary ";
-                setColor(6);
+                setColor(GOLD);
                 string file_demo = folderName.substr(folderName.rfind("/") + 1);
                 pathToDemonstration(file_demo);
                 cout << file_demo;
-                setColor(15);
+                setColor(WHITE);
                 cout << " was added to ";
-                setColor(6);
+                setColor(GOLD);
                 folderName = folderName.substr(7, folderName.find("/") - 7);
                 folderName[0] = toupper(folderName[0]);
                 pathToDemonstration(folderName);
                 cout << folderName;
-                setColor(15);
+                setColor(WHITE);
                 cout << " folder\n\n";
             }
         }
@@ -1861,18 +1944,18 @@ void Dictionary::foldersHandler()
             needInstructions = 0;
             if(folder == "" || file.substr(13) == folder + "all.txt") {
                 if(!out) {
-                    setColor(4);
+                    cout << '\a';
+                    setColor(RED);
                     if(folder == "") cout << "This dictionary is not in any folder\n\n";
                     else cout << "Local \"all\" dictionary can't be removed\n\n";
-                    setColor(15);
+                    setColor(WHITE);
                 }
-                cout << '\a';
                 goto thatsall;
             }
             string path = file.substr(13, file.size() - 17);
             if(excluded.find(path) == excluded.end()) addToFile(*this, 1);
             else addToFile(*this, 0);
-            writeInDic(innerAll_file, innerAll_dict);
+            WriteInDic(innerAll_file, innerAll_dict);
             innerAll_dict.clear();
             innerAll_file = "";
             folder = "";
@@ -1887,124 +1970,156 @@ void Dictionary::foldersHandler()
         }
         else if(choice.substr(0, 4) == "show") {
             needInstructions = 0;
-            const int markeringColor = 6;
             string folderName = choice.substr(4);
-            getRidOfSpaces(folderName);
+            GetRidOfSpaces(folderName);
             if(folder != "") {
                 string path = file.substr(13, file.size() - 17);
                 if(excluded.find(path) == excluded.end()) addToFile(*this, 1);
                 else addToFile(*this, 0);
             }
             if(folderName == "") {
-                DIR *dir = opendir("Dictionaries");
-                dirent *entry;
-                vector<string> folders;
-                string title;
+                vector<string> existingFolders = folderInfo.GetAllFolders();
+                if(!existingFolders.size()) {
+                    if(!out) {
+                        setColor(RED);
+                        cout << "There are no folders yet\n\n";
+                        setColor(WHITE);
+                    }
+                    goto thatsall;
+                }
                 int star = -1; // индекс папки, которая открыта в данный момент
-                while((entry = readdir(dir)) != nullptr) {
-                    title = entry->d_name;
-                    if(title != "." && title != ".." && title.substr(title.size() - 4) != ".txt") {
-                        if(folder == title + "/") star = folders.size();
-                        title.erase(0, 7);
-                        pathToDemonstration(title);
-                        title[0] = toupper(title[0]);
-                        folders.push_back(title);
+                pathToDemonstration(folder);
+                for(int i = 0; i < existingFolders.size(); ++i) {
+                    if("papka  " + existingFolders[i] + "/" == folder) {
+                        star = i;
+                        break;
                     }
                 }
-                if(!folders.size()) {
-                    setColor(4);
-                    cout << "There are no folders yet\n\n";
-                    setColor(15);
-                    goto thatsall;
-                }
-                else {
-                    if(out) cout << "\t";
+                demonstrationToPath(folder);
+                if(out) cout << "\t";
+                else cout << "\n    ";
+                cout << "Existing folders:";
+                if(out) cout << "\n";
+                setColor(GOLD);
+                for(int i = 0; i < existingFolders.size(); ++i) {
+                    if(out) cout << "\n\t";
                     else cout << "\n    ";
-                    cout << "Existing folders:";
-                    if(out) cout << "\n";
-                    setColor(6);
-                    for(int i = 0; i < folders.size(); ++i) {
-                        if(out) cout << "\n\t";
-                        else cout << "\n    ";
-                        if(i == star) {
-                            setColor(12);
-                            cout << (char) 16;
-                            setColor(6);
-                        }
-                        else cout << ' ';
-                        cout << ' ' << folders[i];
+                    if(i == star) {
+                        setColor(LIGHT_RED);
+                        cout << (char) 16 << " ";
+                        setColor(GOLD);
                     }
-                    cout << "\n\n";
-                    setColor(15);
-                    if(out) _getch();
-                    goto thatsall;
+                    else cout << "  ";
+                    existingFolders[i][0] = toupper(existingFolders[i][0]);
+                    cout << existingFolders[i];
                 }
+                cout << "\n\n";
+                setColor(WHITE);
+                if(out) _getch();
+                goto thatsall;
             }
             demonstrationToPath(folderName);
             string title = folderName;
             if(title == "this" && folder != "") title = folder.substr(7, folder.size() - 8);
             title[0] = toupper(title[0]);
             pathToDemonstration(title);
-            if(folderName == "this" && folder != "") folderName = "Dictionaries/" + folder;
+            if(folderName == "this" && folder != "") folderName = "Dictionaries/" + folder.substr(0, folder.size() - 1);
             else folderName = "Dictionaries/papka__" + folderName;
-            DIR *dir = opendir(folderName.c_str());
-            dirent *entry;
-            if(!dir) {
+            if(!folderInfo.FolderExists(folderName)) {
                 if(!out) {
-                    setColor(4);
+                    setColor(RED);
                     cout << "No such folder\n\n";
-                    setColor(15);
+                    setColor(WHITE);
                 }
                 goto thatsall;
             }
             if(out) system("cls");
-            setColor(6);
+            setColor(GOLD);
             cout << "\n";
             if(out) cout << "\t";
             else cout << "    ";
             cout << title << "\n";
-            vector<string> filesInFolder;
+            vector<string> filesInFolder = folderInfo.GetFilesFromFolder(folderName);
             vector<int>    theirNameSizes;
             vector<int>    dictSizes;
             vector<int>    dictSizesNumLength; // количества цифр в числе размера словаря (напр. 375 -> 3)
-            while((entry = readdir(dir)) != nullptr) {
-                string fileName = entry->d_name;
-                if(fileName == "." || fileName == "..")
-                    continue;
-                int ds = getDictionarySize(folderName + "/" + fileName);
+            for(const auto& fileName : filesInFolder) {
+                string fileName_path = fileName + ".txt";
+                demonstrationToPath(fileName_path);
+                int ds = getDictionarySize(folderName + "/" + fileName_path);
                 if(ds >= 10000) dictSizesNumLength.push_back(5);
                 else if(ds >= 1000) dictSizesNumLength.push_back(4);
                 else if(ds >= 100) dictSizesNumLength.push_back(3);
                 else if(ds >= 10) dictSizesNumLength.push_back(2);
                 else dictSizesNumLength.push_back(1);
                 dictSizes.push_back(ds);
-                fileName.erase(fileName.size() - 4);
-                pathToDemonstration(fileName);
-                filesInFolder.push_back(fileName);
                 theirNameSizes.push_back(fileName.size());
-                if(fileName == "all") {
-                    rotate(filesInFolder.rbegin(), filesInFolder.rbegin() + 1, filesInFolder.rend());
-                    rotate(theirNameSizes.rbegin(), theirNameSizes.rbegin() + 1, theirNameSizes.rend());
-                    rotate(dictSizes.rbegin(), dictSizes.rbegin() + 1, dictSizes.rend());
-                    rotate(dictSizesNumLength.rbegin(), dictSizesNumLength.rbegin() + 1, dictSizesNumLength.rend());
-                }
             }
-            closedir(dir);
             int distance = *max_element(theirNameSizes.begin(), theirNameSizes.end()) + 3;
             int maxNumberSize = *max_element(dictSizesNumLength.begin(), dictSizesNumLength.end());
             for(int i = 0; i < theirNameSizes.size(); ++i)
                 theirNameSizes[i] -= maxNumberSize - dictSizesNumLength[i];
             for(int i = 0; i < filesInFolder.size(); ++i) {
-                setColor(4);  cout << "\n";
-                              if(out) cout << "\t";
-                              else cout << "    ";
-                              cout << (char) -92 << " ";
-                setColor(15); cout << filesInFolder[i];
-                setColor(7);  cout << " " << string(distance - theirNameSizes[i], '.') << " " << dictSizes[i];
+                setColor(RED);
+                cout << "\n";
+                if(out) cout << "\t";
+                else cout << "    ";
+                cout << (char) -92 << " ";
+                setColor(WHITE);
+                cout << filesInFolder[i];
+                setColor(GRAY);
+                cout << " " << string(distance - theirNameSizes[i], '.') << " " << dictSizes[i];
             }
-            setColor(15);
+            setColor(WHITE);
             if(out) _getch();
             if(!out) cout << "\n\n";
+        }
+        else if(choice.substr(0, 5) == "renew") {
+            needInstructions = 0;
+            if(folder == "") {
+                if(out) return;
+                else {
+                    cout << '\a';
+                    setColor(RED);
+                    cout << "This kind of operation must be performed from a folder\n\n";
+                    setColor(WHITE);
+                }
+                goto thatsall;
+            }
+            if(FileIsExcluded()) addToFile(*this, 0);
+            else addToFile(*this, 1);
+            map<string, vector<string>> newLocalAll;
+            vector<string> filesInFolder = folderInfo.GetFilesFromFolder(folder);
+            COORD currentPos = getPos();
+            currentPos.Y--;
+            currentPos.X = output_before_user_request.size();
+            if(!out) setColor(LIGHT_RED);
+            bool R = 1;
+            for(auto fileName : filesInFolder) {
+                if(fileName == "all") continue;
+                folderInfo.TransformMovieTitleIntoPath(fileName);
+                ReadDic("Dictionaries/" + folder + fileName, newLocalAll, 0);
+                if(!out) {
+                    setPosition(currentPos);
+                    if(R) cout << "RENEW";
+                    else cout << "renew";
+                    R ^= 1;
+                }
+            }
+            if(!out && !R) {
+                setPosition(currentPos);
+                cout << "renew";
+            }
+            cout << "\n";
+            WriteInDic(innerAll_file, newLocalAll);
+            if(file.substr(file.rfind("/") + 1) == "all.txt") dict = newLocalAll;
+            else {
+                innerAll_dict = newLocalAll;
+                for(auto it = dict.begin(); it != dict.end(); ++it) {
+                    auto del = innerAll_dict.find(it->first);
+                    if(del != innerAll_dict.end()) innerAll_dict.erase(del);
+                }
+            }
         }
         else if(choice == "cls") {
             needInstructions = 0;
@@ -2014,20 +2129,20 @@ void Dictionary::foldersHandler()
         else if(choice == "exit") out = 1;
         thatsall:
         if(out) break;
-        if(needInstructions && choice != "") foldersHandlerInstructions(command);
-        setColor(7);
+        if(needInstructions && choice != "") FoldersHandlerInstructions(command);
+        setColor(GRAY);
         cout << output_before_user_request;
-        setColor(15);
+        setColor(WHITE);
         needInstructions = 1;
         command = "";
         getline(cin, choice);
-        getRidOfSpaces(choice);
+        GetRidOfSpaces(choice);
         for(int i = 0; i < choice.size(); ++i)
         choice[i] = tolower(choice[i]);
     }
 }
 
-void Dictionary::foldersHandlerInstructions(string command)
+void Dictionary::FoldersHandlerInstructions(string command)
 {
     string output;
     int width;
@@ -2040,9 +2155,9 @@ void Dictionary::foldersHandlerInstructions(string command)
     }
     else exit(-1);
     width -= 12;
-    int instructionColor = 6,
-        descriptionColor = 7,
-        folderNameColor = 3;
+    Colors instructionColor = GOLD,
+           descriptionColor = GRAY,
+           folderNameColor = CYAN;
 
     if(command == "create") {
         setColor(instructionColor);
@@ -2050,7 +2165,7 @@ void Dictionary::foldersHandlerInstructions(string command)
         setColor(folderNameColor);
         cout << "<folder name>";
         setColor(descriptionColor);
-        cout << modifyString(" - создает новую папку", width, 19) << "\n\n";
+        cout << ModifyString(" - создает новую папку", width, 19) << "\n\n";
     }
     else if(command == "delete") {
         setColor(instructionColor);
@@ -2058,7 +2173,7 @@ void Dictionary::foldersHandlerInstructions(string command)
         setColor(folderNameColor);
         cout << "<folder name>";
         setColor(descriptionColor);
-        cout << modifyString(" - удаляет существующую папку и перемещает все находящиеся в ней словари в общую область видимости", width, 19) << "\n\n";
+        cout << ModifyString(" - удаляет существующую папку и перемещает все находящиеся в ней словари в общую область видимости", width, 19) << "\n\n";
     }
     else if(command == "add to") {
         setColor(instructionColor);
@@ -2066,7 +2181,7 @@ void Dictionary::foldersHandlerInstructions(string command)
         setColor(folderNameColor);
         cout << "<folder name>";
         setColor(descriptionColor);
-        cout << modifyString(" - добавляет текущий словарь во введенную папку", width, 19) << "\n\n";
+        cout << ModifyString(" - добавляет текущий словарь во введенную папку", width, 19) << "\n\n";
     }
     else {
         setColor(instructionColor);
@@ -2074,57 +2189,62 @@ void Dictionary::foldersHandlerInstructions(string command)
         setColor(folderNameColor);
         cout << "<folder name>";
         setColor(descriptionColor);
-        cout << modifyString(" - создать новую папку", width, 19);
+        cout << ModifyString(" - создать новую папку", width, 19);
 
         setColor(instructionColor);
         cout << "\n    delete ";
         setColor(folderNameColor);
         cout << "<folder name>";
         setColor(descriptionColor);
-        cout << modifyString(" - удалить существующую папку с перемещением всех находящихся в ней словарей в общую область видимости", width, 19);
+        cout << ModifyString(" - удалить существующую папку с перемещением всех находящихся в ней словарей в общую область видимости", width, 19);
 
         setColor(instructionColor);
         cout << "\n    add to ";
         setColor(folderNameColor);
         cout << "<folder name>";
         setColor(descriptionColor);
-        cout << modifyString(" - добавить текущий словарь во введенную папку", width, 19);
+        cout << ModifyString(" - добавить текущий словарь во введенную папку", width, 19);
 
         setColor(instructionColor);
         cout << "\n    remove";
         setColor(descriptionColor);
-        cout << modifyString(" - переместить текущий словарь из папки в общую область видимости", width, 5);
+        cout << ModifyString(" - переместить текущий словарь из папки в общую область видимости", width, 5);
 
         setColor(instructionColor);
         cout << "\n    show";
         setColor(descriptionColor);
-        cout << modifyString(" - показать существующие папки с указанием в какой папке находится текущий словарь (если он не в общей области видимости)", width, 3);
+        cout << ModifyString(" - показать существующие папки с указанием в какой папке находится текущий словарь (если он не в общей области видимости)", width, 3);
 
         setColor(instructionColor);
         cout << "\n    show ";
         setColor(folderNameColor);
         cout << "<folder name>";
         setColor(descriptionColor);
-        cout << modifyString(" - показать все словари введенной папки с указанием размера каждого словаря", width, 17);
+        cout << ModifyString(" - показать все словари введенной папки с указанием размера каждого словаря", width, 17);
+
+        setColor(instructionColor);
+        cout << "\n    renew";
+        setColor(descriptionColor);
+        cout << ModifyString(" - обновить общий словарь текущей папки", width, 4);
 
         setColor(instructionColor);
         cout << "\n    cls";
         setColor(descriptionColor);
-        cout << " - очистить экран";
+        cout << ModifyString(" - очистить экран", width, 2);
 
         setColor(instructionColor);
         cout << "\n    exit";
         setColor(descriptionColor);
-        cout << modifyString(" - вернуться в главное меню", width, 3);
+        cout << ModifyString(" - вернуться в главное меню", width, 3);
         cout << "\n\n";
 
-        setColor(15);
+        setColor(WHITE);
     }
 }
 
-void Dictionary::readDic(string path, map<string, vector<string>>& dic)
+void Dictionary::ReadDic(string path, map<string, vector<string>>& dic, bool clearItFirst)
 {
-    dic.clear();
+    if(clearItFirst) dic.clear();
     ifstream fin(path);
     string word, meaning, temp;
     if(!fin.is_open()) {
@@ -2169,11 +2289,11 @@ void Dictionary::readDic(string path, map<string, vector<string>>& dic)
     if(dic.find("") != dic.end()) dic.erase("");
 }
 
-void Dictionary::writeInDic(string path, map<string, vector<string>>& dic)
+void Dictionary::WriteInDic(string path, const map<string, vector<string>>& dic)
 {
     ofstream fout(path.c_str());
     if(!fout.is_open()) {
-        perror(("\ndictionary.cpp -> строка " + to_string(__LINE__)).c_str());
+        perror(("\ndictionary.cc -> строка " + to_string(__LINE__)).c_str());
         cout << "Имя файла: \"" << path << "\"\n";
         exit(-1);
     }
@@ -2190,92 +2310,92 @@ void Dictionary::writeInDic(string path, map<string, vector<string>>& dic)
     fout.close();
 }
 
-void Dictionary::fileUpDown(char whereTo)
+void Dictionary::FileUpDown(char whereTo)
 {
     if(folder == "") return;
-    string dirFolder = file;
-    dirFolder.erase(dirFolder.rfind("/"));
-    DIR *dir = opendir(dirFolder.c_str());
-    dirent *entry;
-    if(!dir) {
-        perror(("\ndictionary.cpp -> строка " + to_string(__LINE__)).c_str());
-        exit(-1);
-    }
-    vector<string> files;
-    string reader;
-    while((entry = readdir(dir)) != nullptr) {
-        reader = entry->d_name;
-        if(reader == "." || reader == "..") continue;
-        files.push_back(reader);
-        if(reader == "all.txt") rotate(files.begin(), files.end() - 1, files.end());
-    }
-    closedir(dir);
-    if(files.size() == 1) return;
-    int index;
-    reader = file;
-    reader.erase(0, reader.rfind("/") + 1);
-    for(int i = 0; i < files.size(); ++i) {
-        if(files[i] == reader) {
+    vector<string> filesInFolder = folderInfo.GetFilesFromFolder(folder);
+    if(filesInFolder.size() == 1) return;
+    int index = -1;
+    string movieTitle = file.substr(file.rfind("/") + 1);
+    movieTitle.erase(movieTitle.size() - 4);
+    pathToDemonstration(movieTitle);
+    for(int i = 0; i < filesInFolder.size(); ++i) {
+        if(filesInFolder[i] == movieTitle) {
             index = i;
             break;
         }
     }
     if(whereTo == '<') {
         if(index) index--;
-        else index = files.size() - 1;
+        else index = filesInFolder.size() - 1;
     }
     else {
-        if(index == files.size() - 1) index = 0;
+        if(index == filesInFolder.size() - 1) index = 0;
         else index++;
     }
     if(excluded.find(file.substr(13, file.size() - 17)) != excluded.end()) addToFile(*this, 0);
     else addToFile(*this, 1);
-    file = "Dictionaries/" + folder + files[index];
-    readDic(file, dict);
-    readDic("Dictionaries/all.txt", all_dict);
-    int initialSize = all_dict.size();
+    string newFilePath = filesInFolder[index] + ".txt";
+    demonstrationToPath(newFilePath);
+    file = "Dictionaries/" + folder + newFilePath;
+    ReadDic(file, dict);
+    ReadDic("Dictionaries/all.txt", all_dict);
+    ReadDic("Dictionaries/" + folder + "all.txt", innerAll_dict);
     for(auto it = dict.begin(); it != dict.end(); ++it) {
         auto del = all_dict.find(it->first);
         if(del != all_dict.end()) all_dict.erase(del);
-    }
-    readDic("Dictionaries/" + folder + "all.txt", innerAll_dict);
-    for(auto it = dict.begin(); it != dict.end(); ++it) {
-        auto del = innerAll_dict.find(it->first);
+        del = innerAll_dict.find(it->first);
         if(del != innerAll_dict.end()) innerAll_dict.erase(del);
     }
     while(last_word.size()) last_word.pop();
 }
 
-void Dictionary::changeDictionaryName()
+void Dictionary::ChangeDictionaryName(set<string>& excluded)
 {
     if(file.substr(file.size() - 7) == "all.txt") {
         Beep(80, 400);
         return;
     }
-    system("cls");
-    cout << "\n\tНовое имя словаря: ";
     string newName;
     if(cin.peek() != '\n') {
         getline(cin, newName);
-        getRidOfSpaces(newName);
+        GetRidOfSpaces(newName);
+        if(newName == "") {
+            system("cls");
+            cout << "\n\tНовое имя словаря: ";
+            cin.sync();
+            getline(cin, newName);
+            GetRidOfSpaces(newName);
+        }
     }
-    if(newName == "") {
+    else {
+        system("cls");
+        cout << "\n\tНовое имя словаря: ";
         cin.sync();
         getline(cin, newName);
+        GetRidOfSpaces(newName);
     }
-    getRidOfSpaces(newName);
     if(newName == "") return;
-    demonstrationToPath(newName);
-    if(newName == "all") {
+    vector<string> filesInCurrentFolder = folderInfo.GetFilesFromFolder(folder);
+    if(find(filesInCurrentFolder.begin(), filesInCurrentFolder.end(), newName) != filesInCurrentFolder.end()) {
         cout << '\a';
         return;
     }
+    folderInfo.DeleteFile(file);
+    folderInfo.AddFile(newName, folder);
+    demonstrationToPath(newName);
     newName = "Dictionaries/" + folder + newName + ".txt";
-    rename(file.c_str(), newName.c_str());
-    file = newName;
+    if(newName != file) {
+        if(excluded.find(file.substr(13, file.size() - 17)) != excluded.end()) {
+            excluded.erase(file.substr(13, file.size() - 17));
+            excluded.insert(newName.substr(13, newName.size() - 17));
+        }
+        rename(file.c_str(), newName.c_str());
+        file = newName;
+    }
 }
 
-void Dictionary::showLastAddedWord()
+void Dictionary::ShowLastAddedWord()
 {
     system("cls");
     string last = (last_word.empty()) ? "" : last_word.top();
@@ -2283,75 +2403,45 @@ void Dictionary::showLastAddedWord()
         if(!dict.size()) cout << "\n\tNo words added yet";
         else cout << "\n\tNo words added recently";
     }
-    else printAWord(last, 0, "", 10);
-    char ch = _getch();
-}
-
-COORD Dictionary::getPos()
-{
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    COORD coord;
-    if(GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
-        coord.X = csbi.dwCursorPosition.X;
-        coord.Y = csbi.dwCursorPosition.Y;
-        return coord;
+    else {
+        if(dict[last].size() == 1 && dict[last][0] == " ") PrintAWord(last, 0, "", SEA_WAVE);
+        else PrintAWord(last, 0, "", GREEN);
     }
-    coord.X = 0;
-    coord.Y = 0;
-    return coord;
+    _getch();
 }
 
-char Dictionary::getChar(short x, short y)
+bool Dictionary::YesOrNo()
 {
-    char buff[3];
-    DWORD cbRead = 0;
-    HANDLE hCon = GetStdHandle(STD_OUTPUT_HANDLE);
-    COORD pos = {x, y};
-    ReadConsoleOutputCharacter(hCon, buff, 2, pos, &cbRead);
-    return buff[0];
+    cin.sync();
+    char choice;
+    while("decide yes or no") {
+        choice = _getch();
+        if(choice == 'y' || choice == 'Y' || choice == -83 || choice == -115) return 1;
+        if(choice == 'n' || choice == 'N' || choice == -30 || choice == -110) return 0;
+    }
 }
 
-void Dictionary::getRidOfSpaces(string& word, char sym)
+bool Dictionary::FileIsExcluded(string fileName, string folderName)
 {
-    while(word[0] == sym) word.erase(0, 1);
-    while(word.back() == sym) word.pop_back();
+    // fileName is "Dictionaries/foldername_or_nothing/file.txt"
+    // folderName is "papka__foldername/"
+    if(fileName == "") fileName = file;
+    if(folderName == "...") folderName = folder;
+    fileName = folderName + fileName.substr(fileName.rfind("/") + 1);
+    fileName.erase(fileName.size() - 4);
+    if(excluded.find(fileName) != excluded.end()) return 1;
+    else return 0;
+}
+
+void Dictionary::GetRidOfSpaces(string& phrase, char sym)
+{
+    while(phrase[0] == sym) phrase.erase(0, 1);
+    while(phrase.back() == sym) phrase.pop_back();
     int l = 1;
-    while(l < word.size()) {
-        if(word[l] == sym && word[l-1] == sym) {
-            word.erase(l--, 1);
+    while(l < phrase.size()) {
+        if(phrase[l] == sym && phrase[l-1] == sym) {
+            phrase.erase(l--, 1);
         }
         l++;
     }
-}
-
-void Dictionary::pathToDemonstration(string& s)
-{
-    for(int i = 0; i < s.size(); ++i) {
-        if(s[i] == '_') s[i] = ' ';
-        else if(s[i] == ';') s[i] = ':';
-        else if(s[i] == '#') s[i] = '*';
-    }
-}
-
-void Dictionary::demonstrationToPath(string& s)
-{
-    for(int i = 0; i < s.size(); ++i) {
-        if(s[i] == ' ') s[i] = '_';
-        else if(s[i] == ':') s[i] = ';';
-        else if(s[i] == '*') s[i] = '#';
-    }
-}
-
-int Dictionary::numLength(int num)
-{
-    if(num >= 1000000000) return 10;
-    else if(num >= 100000000) return 9;
-    else if(num >= 10000000) return 8;
-    else if(num >= 1000000) return 7;
-    else if(num >= 100000) return 6;
-    else if(num >= 10000) return 5;
-    else if(num >= 1000) return 4;
-    else if(num >= 100) return 3;
-    else if(num >= 10) return 2;
-    else return 1;
 }

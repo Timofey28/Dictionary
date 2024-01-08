@@ -1,89 +1,45 @@
-#include <bits/stdc++.h>
-#include "dictionary.h"
-#include "dictionary.cpp"
-#include <dirent.h>
+#include <iostream>
+#include <algorithm>
+#include <ctime>
 #include <fcntl.h>
+#include <fstream>
+#include <map>
+#include <random>
+#include <stack>
+#include <set>
+#include <thread>
+#include <vector>
+#include "dictionary.cc"
+#include "folder_info.cc"
 using namespace std;
-void setPosition(int, int);
+
+set<string> excluded;
+FolderInfo folderInfo;
+
 void dirCommand(map<string, vector<string>>& films, string& film_name);
 void renew(map<string, vector<string>>& films);
 pair<int, int> getScreenWH();
-set<string> excluded;
 
 int main()
 {
     setlocale(0, "");
-    const int HIGHLIGHTING = 12; // цветовое изменение строки на которой курсор при выборе фильма из списка
+    const Colors HIGHLIGHTING = LIGHT_RED; // цветовое изменение строки на которой курсор при выборе фильма из списка
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_CURSOR_INFO structCursorInfo;
-    DIR *dir;
-    dirent *entry;
-    dir = opendir("Dictionaries");
-    if(!dir) {
-        mkdir("Dictionaries");
-        ofstream f("Dictionaries/all.txt");
-        f.close();
-        f.open("Dictionaries/__excluded__.txt");
-        f.close();
-        dir = opendir("Dictionaries");
-        if(!dir) {
-            perror("\nНе удалось создать папку \"Dictionaries\"");
-            exit(-1);
-        }
-    }
+    map<string, vector<string>> films;
     string path;
     ifstream fin("Dictionaries/__excluded__.txt");
-    if(!fin.is_open()) {
-        ofstream f("Dictionaries/__excluded__.txt");
-        f.close();
-    }
-    else {
-        while(fin >> path) excluded.insert(path);
-        fin.close();
-    }
+    while(fin >> path) excluded.insert(path);
+    fin.close();
+
     another_movie:
     GetConsoleCursorInfo(hConsole, &structCursorInfo);
     structCursorInfo.bVisible = FALSE;
     SetConsoleCursorInfo(hConsole, &structCursorInfo);
     vector<string> vars, innerFolderFilms;
-    map<string, vector<string>> films;
-    string s, film_name, just_a_name = "", afterSlash;
-    dir = opendir("Dictionaries");
-    bool isFolder;
-    while((entry = readdir(dir)) != nullptr) {
-        innerFolderFilms.clear();
-        s = entry->d_name;
-        if(s == "." || s == ".." || s == "__excluded__.txt") continue;
-        isFolder = false;
-        if(s.substr(0, 7) == "papka__") {
-            isFolder = true;
-            if(s.substr(s.size() - 4) == ".txt") {
-                cout << "\nСоздался файл \"" << s << "\"\n";
-                exit(-1);
-            }
-            DIR *innerDir = opendir(("Dictionaries/" + s).c_str());
-            if(!innerDir) {
-                string endProgram = "\nmain.cpp -> строка " + to_string(__LINE__);
-                perror(endProgram.c_str());
-                exit(-1);
-            }
-            dirent *innerEntry;
-            while((innerEntry = readdir(innerDir)) != nullptr) {
-                string innerFilm = innerEntry->d_name;
-                if(innerFilm == "." || innerFilm == "..") continue;
-                innerFilm.erase(innerFilm.size() - 4);
-                Dictionary::pathToDemonstration(innerFilm);
-                innerFolderFilms.push_back(innerFilm);
-                if(innerFilm == "all") rotate(innerFolderFilms.begin(), innerFolderFilms.end() - 1, innerFolderFilms.end());
-            }
-            s.erase(0, 7);
-        }
-        else s.erase(s.size() - 4);
-        Dictionary::pathToDemonstration(s);
-        if(isFolder) s += ' ';
-        films[s] = innerFolderFilms;
-    }
-    closedir(dir);
+    films = folderInfo.GetAllFilms();
+
+    string s, film_name, just_a_name = "";
     vector<bool> kIsInFolder;
     system("cls");
     char c[2];
@@ -94,8 +50,15 @@ int main()
     cin.sync();
     while(1) {
         c[0] = _getch();
+        if(c[0] == 27) {
+            ofstream fout("Dictionaries/__excluded__.txt");
+            for(auto it = excluded.begin(); it != excluded.end(); ++it)
+                fout << *it << "\n";
+            fout.close();
+            return 0;
+        }
         if(c[0] == ' ' && !film_name.size() || c[0] == ' ' && film_name.back() == ' ') continue;
-        if(c[0] == 13 || c[0] == 9) { // enter
+        if(c[0] == 13 || c[0] == 9) { // enter || tab
             if(film_name == "" && c[0] == 9) {
                 film_name = "all";
                 break;
@@ -155,10 +118,10 @@ int main()
                     it->second.pop_back();
             }
         }
-        else if(c[0] == 'k' || c[0] == -85) goto arrowUp;       // up
-        else if(c[0] == 'j' || c[0] == -82) goto arrowDown;     // down;
-        else if(c[0] == 11)                 goto ctrlArrowUp;   // ctrl + k
-        else if(c[0] == 10)                 goto ctrlArrowDown; // ctrl + j
+        else if(c[0] == 'k') goto arrowUp;       // up (для ввода букв k, j нужна русская раскладка)
+        else if(c[0] == 'j') goto arrowDown;     // down
+        else if(c[0] == 11)  goto ctrlArrowUp;   // ctrl + k
+        else if(c[0] == 10)  goto ctrlArrowDown; // ctrl + j
         else if(c[0] == -32 && kbhit()) { // стрелки
             changer = _getch();
             sameUpOrDown:
@@ -239,14 +202,14 @@ int main()
         }
         if(c[0] != 8 && (c[0] != -32 || !kbhit())) { // 8: backspace; -32 - первый байт
             OemToCharA(c, c);
-            static map<char, char> ru_to_en = {{'й', 'q'}, {'ц', 'w'}, {'у', 'e'}, {'к', 'r'}, {'е', 't'}, {'н', 'y'}, {'г', 'u'},
+            static map<char, char> ru2en = {{'й', 'q'}, {'ц', 'w'}, {'у', 'e'}, {'к', 'r'}, {'е', 't'}, {'н', 'y'}, {'г', 'u'},
             {'ш', 'i'}, {'щ', 'o'}, {'з', 'p'}, {'ф', 'a'}, {'ы', 's'}, {'в', 'd'}, {'а', 'f'}, {'п', 'g'}, {'р', 'h'}, {'о', 'j'},
             {'л', 'k'}, {'д', 'l'}, {'я', 'z'}, {'ч', 'x'}, {'с', 'c'}, {'м', 'v'}, {'и', 'b'}, {'т', 'n'}, {'ь', 'm'}, {'Й', 'Q'},
             {'Ц', 'W'}, {'У', 'E'}, {'К', 'R'}, {'Е', 'T'}, {'Н', 'Y'}, {'Г', 'U'}, {'Ш', 'I'}, {'Щ', 'O'}, {'З', 'P'}, {'Ф', 'A'},
             {'Ы', 'S'}, {'В', 'D'}, {'А', 'F'}, {'П', 'G'}, {'Р', 'H'}, {'О', 'J'}, {'Л', 'K'}, {'Д', 'L'}, {'Я', 'Z'}, {'Ч', 'X'},
             {'С', 'C'}, {'М', 'V'}, {'И', 'B'}, {'Т', 'N'}, {'Ь', 'M'}};
-            if(ru_to_en.find(c[0]) != ru_to_en.end())
-                c[0] = ru_to_en[c[0]];
+            if(ru2en.find(c[0]) != ru2en.end())
+                c[0] = ru2en[c[0]];
 
             k = -1;
             k_withFolderOpen = -1;
@@ -274,10 +237,10 @@ int main()
         }
         if(film_name == "renew" || film_name == "RENEW") {
             setPosition(33, 1);
-            SetConsoleTextAttribute(hConsole, (WORD) 12);
+            setColor(LIGHT_RED);
             cout << film_name;
             renew(films);
-            SetConsoleTextAttribute(hConsole, (WORD) 15);
+            setColor(WHITE);
             goto another_movie;
         }
         if(film_name == "dir" || film_name == "DIR") {
@@ -290,15 +253,10 @@ int main()
         }
         if(ok) break;
         vars.clear();
-        bool notSuits, hasSlash;
+        bool notSuits;
         for(auto it = films.begin(); it != films.end(); ++it) {
             notSuits = 0;
             string film = it->first, input = film_name;
-            if(input.find("/") != string::npos) {
-                hasSlash = 1;
-                afterSlash = input.substr(input.find("/") + 1);
-            }
-            else hasSlash = 0;
             for(int i = 0; i < film.size(); ++i)
                 film[i] = tolower(film[i]);
             for(int i = 0; i < input.size(); ++i)
@@ -329,38 +287,38 @@ int main()
             cout << "\n\t                        ";
             if(films[vars[i]].size()) {
                 if(films[vars[i]].back() == "PAPKA_OTKRITA") {
-                    if(realCurrentLine == i_lineCounter++) Dictionary::setColor(HIGHLIGHTING);
+                    if(realCurrentLine == i_lineCounter++) setColor(HIGHLIGHTING);
                     cout << " - " << vars[i] << ' ';
                     cout << "\n\t                         ";
-                    Dictionary::setColor(15);
-                    if(realCurrentLine == i_lineCounter++) Dictionary::setColor(HIGHLIGHTING);
+                    setColor(WHITE);
+                    if(realCurrentLine == i_lineCounter++) setColor(HIGHLIGHTING);
                     _setmode(_fileno(stdout), _O_U16TEXT);
                     wcout << (wchar_t) 0x203E << (wchar_t) 0x203E << (wchar_t) 0x203E;
                     _setmode(_fileno(stdout), _O_TEXT);
                     cout << "|- " << films[vars[i]][0];
-                    Dictionary::setColor(15);
+                    setColor(WHITE);
                     for(int j = 1; j < films[vars[i]].size() - 1; ++j) {
                         cout << "\n\t                            ";
-                        if(realCurrentLine == i_lineCounter++) Dictionary::setColor(HIGHLIGHTING);
+                        if(realCurrentLine == i_lineCounter++) setColor(HIGHLIGHTING);
                         cout << "|- ";
                         cout << films[vars[i]][j];
-                        Dictionary::setColor(15);
+                        setColor(WHITE);
                     }
                 }
                 else {
-                    if(realCurrentLine == i_lineCounter++) Dictionary::setColor(HIGHLIGHTING);
+                    if(realCurrentLine == i_lineCounter++) setColor(HIGHLIGHTING);
                     cout << " ";
                     _setmode(_fileno(stdout), _O_U16TEXT);
                     wcout << (wchar_t) 0x2261;
                     _setmode(_fileno(stdout), _O_TEXT);
                     cout << ' ' << vars[i] << ' ';
-                    Dictionary::setColor(15);
+                    setColor(WHITE);
                 }
             }
             else {
-                if(realCurrentLine == i_lineCounter++) Dictionary::setColor(HIGHLIGHTING);
+                if(realCurrentLine == i_lineCounter++) setColor(HIGHLIGHTING);
                 cout << ' ' << vars[i] << ' ';
-                Dictionary::setColor(15);
+                setColor(WHITE);
             }
         }
         setPosition(33 + film_name.size(), 1);
@@ -369,39 +327,48 @@ int main()
     while(film_name.back() == ' ') film_name.pop_back();
     if(film_name == "") goto another_movie;
     if(film_name[0] == '\\') film_name.erase(0, 1);
-    Dictionary::demonstrationToPath(film_name);
-    if((film_name.find("/") != string::npos || film_name.find(">") != string::npos) && film_name.substr(0, 7) != "papka__") {
-        if(film_name.find(">") != string::npos) film_name[film_name.find(">")] = '/';
+    demonstrationToPath(film_name);
+    if(film_name.find(">") != string::npos) film_name[film_name.find(">")] = '/';
+    if(film_name.find("/") != string::npos && film_name.substr(0, 7) != "papka__") {
         if(film_name.find("_/_") != string::npos) film_name.replace(film_name.find("/") - 1, 3, "/");
         else if(film_name.find("_/") != string::npos) film_name.replace(film_name.find("/") - 1, 2, "/");
         else if(film_name.find("/_") != string::npos) film_name.replace(film_name.find("/"), 2, "/");
-        string papka = "papka__" + film_name.substr(0, film_name.find("/"));
-        dir = opendir(("Dictionaries/" + papka).c_str());
-        if(!dir) {
-            mkdir(("Dictionaries/" + papka).c_str());
-            ofstream f("Dictionaries/" + papka + "/all.txt");
+        string folder = "papka__" + film_name.substr(0, film_name.find("/"));
+        string file = film_name.substr(film_name.find("/") + 1);
+        if(!folderInfo.FolderExists(folder)) {
+            mkdir(("Dictionaries/" + folder).c_str());
+            ofstream f("Dictionaries/" + folder + "/all.txt");
             f.close();
         }
-        closedir(dir);
+        folderInfo.AddFile(file, folder);
         film_name = "papka__" + film_name;
     }
+    else {
+        string folder = "";
+        string file = film_name;
+        if(film_name.substr(0, 7) == "papka__") {
+            folder = film_name.substr(0, film_name.find("/"));
+            file = film_name.substr(film_name.find("/") + 1);
+        }
+        folderInfo.AddFile(file, folder);
+    }
     Dictionary d(film_name);
-    char ch;
+    char choice;
     string folderWriting, fileWriting;
     do {
         system("cls");
-        path = d.getFileName().substr(13, d.getFileName().size() - 17);
-        if(excluded.find(path) == excluded.end()) d.setColor(14);
-        else d.setColor(11);
-        fileWriting = d.getFileName();
+        path = d.GetFileName().substr(13, d.GetFileName().size() - 17);
+        if(excluded.find(path) == excluded.end()) setColor(BEIGE);
+        else setColor(SEA_WAVE);
+        fileWriting = d.GetFileName();
         fileWriting = fileWriting.substr(fileWriting.rfind("/") + 1);
         fileWriting.erase(fileWriting.size() - 4);
-        folderWriting = d.getFolder();
-        Dictionary::pathToDemonstration(fileWriting);
+        folderWriting = d.GetFolder();
+        pathToDemonstration(fileWriting);
         if(folderWriting.size()) {
             folderWriting.erase(0, 7);
             folderWriting.pop_back();
-            Dictionary::pathToDemonstration(folderWriting);
+            pathToDemonstration(folderWriting);
             folderWriting[0] = toupper(folderWriting[0]);
             cout << "\n\t<<< " << folderWriting << " -> " << fileWriting << " >>>";
         }
@@ -410,106 +377,118 @@ int main()
             cout << "\n\t<<< " << fileWriting << " >>>";
         }
 
-        cout << "\n\tCurrent dictionary size: " << d.getSize() << "\n\n\t";                       d.setColor(10);
+        cout << "\n\tCurrent dictionary size: " << d.GetSize() << "\n\n\t";                        setColor(GREEN);
 
-        if(d.getFileName() != "Dictionaries/" + d.getFolder() + "all.txt") {
-            cout << "a"; d.setColor(15); cout << " - Add a new word\n\t";                         d.setColor(10);
-            cout << "m"; d.setColor(15); cout << " - add a new Meaning to some word\n\t";         d.setColor(10);
+        if(d.GetFileName() != "Dictionaries/" + d.GetFolder() + "all.txt") {
+            cout << "a"; setColor(WHITE); cout << " - Add a new word\n\t";                         setColor(GREEN);
+            cout << "m"; setColor(WHITE); cout << " - add a new Meaning to some word\n\t";         setColor(GREEN);
         }
-        cout << "s"; d.setColor(15); cout << " - Show all words with meanings\n\t";               d.setColor(10);
-        cout << "w"; d.setColor(15); cout << " - show Without meanings\n\t";                      d.setColor(10);
-        if(d.getFileName() != "Dictionaries/" + d.getFolder() + "all.txt")
-        {cout << "d"; d.setColor(15); cout << " - Delete some word from dictionary\n\t";          d.setColor(10);}
-        cout << "f"; d.setColor(15); cout << " - Find a word\n\t";                                d.setColor(10);
-        if(d.getFileName() != "Dictionaries/all.txt")
-        {cout << "v"; d.setColor(15); cout << " - find among all\n\t";                            d.setColor(10);}
-        cout << "t"; d.setColor(15); cout << " - deTermine which dictionary the word is in\n\t";  d.setColor(10);
-        cout << "x"; d.setColor(15); cout << " - pass an eXam\n\n\t";                             d.setColor(10);
+        cout << "s"; setColor(WHITE); cout << " - Show all words with meanings\n\t";               setColor(GREEN);
+        cout << "w"; setColor(WHITE); cout << " - show Without meanings\n\t";                      setColor(GREEN);
+        if(d.GetFileName() != "Dictionaries/" + d.GetFolder() + "all.txt")
+        {cout << "d"; setColor(WHITE); cout << " - Delete some word from dictionary\n\t";          setColor(GREEN);}
+        cout << "f"; setColor(WHITE); cout << " - Find a word\n\t";                                setColor(GREEN);
+        if(d.GetFileName() != "Dictionaries/all.txt")
+        {cout << "v"; setColor(WHITE); cout << " - find among all\n\t";                            setColor(GREEN);}
+        cout << "t"; setColor(WHITE); cout << " - deTermine which dictionary the word is in\n\t";  setColor(GREEN);
+        cout << "x"; setColor(WHITE); cout << " - pass an eXam\n\t";                             setColor(GREEN);
+        if(d.GetFileName() == "Dictionaries/all.txt")
+        {cout << "i"; setColor(WHITE); cout << " - Interesting Info\n";                          setColor(GREEN);}
+        cout << "\n\t";
 
-        if(d.getFileName() != "Dictionaries/" + d.getFolder() + "all.txt")
-        {cout << "z"; d.setColor(15); cout << " - delete this dictionary\n\t";                    d.setColor(10);}
-        cout << "c"; d.setColor(15); cout << " - Choose another movie\n\t";                       d.setColor(10);
-        cout << "r"; d.setColor(15); cout << " - foldeRs\n\t";                                    d.setColor(10);
-        if(d.getFileName() != "Dictionaries/" + d.getFolder() + "all.txt")
-        {cout << "g"; d.setColor(15); cout << " - change dictionary name\n\t";                    d.setColor(10);}
-        cout << "e"; d.setColor(15); cout << " - Exit\n\n\t";
+        if(d.GetFileName() != "Dictionaries/" + d.GetFolder() + "all.txt")
+        {cout << "z"; setColor(WHITE); cout << " - delete this dictionary\n\t";                    setColor(GREEN);}
+        cout << "c"; setColor(WHITE); cout << " - Choose another movie\n\t";                       setColor(GREEN);
+        cout << "r"; setColor(WHITE); cout << " - foldeRs\n\t";                                    setColor(GREEN);
+        if(d.GetFileName() != "Dictionaries/" + d.GetFolder() + "all.txt")
+        {cout << "g"; setColor(WHITE); cout << " - change dictionary name\n\t";                    setColor(GREEN);}
+        cout << "h"; setColor(WHITE); cout << " - help\n\t";                                       setColor(GREEN);
+        cout << "e"; setColor(WHITE); cout << " - Exit\n\n\t";
         cin.sync();
-        cin >> c[0];
-        OemToCharA(c, c);
-        ch = tolower(c[0]);
-        switch(ch)
+        cin >> choice;
+        choice = tolower(choice);
+        switch(choice)
         {
-            case -12:
-            case 'a': if(d.getFileName() != "Dictionaries/" + d.getFolder() + "all.txt") d.add();
-                      break;
-            case -4:
-            case 'm': if(d.getFileName() != "Dictionaries/" + d.getFolder() + "all.txt") d.addSomeMeanings("");
-                      break;
-            case -5:
-            case 's': d.print();
-                      break;
-            case -10:
-            case 'w': d.printOnlyEnglish();
-                      break;
-            case -30:
-            case 'd': if(d.getFileName() != "Dictionaries/" + d.getFolder() + "all.txt") d.getRidOf();
-                      break;
-            case -32:
-            case 'f': d.findAWord(0);
+            case -28:
+            case -108:
+            case 'a': if(d.GetFileName() != "Dictionaries/" + d.GetFolder() + "all.txt") d.Add();
                       break;
             case -20:
-            case 'v': d.findAWord(1);
+            case 'm': if(d.GetFileName() != "Dictionaries/" + d.GetFolder() + "all.txt") d.AddSomeMeanings("");
                       break;
-            case -9:
-            case 'x': d.exam();
+            case -21:
+            case -101:
+            case 's': d.Print();
                       break;
-            case -1:
-            case 'z': if(d.getFileName() != "Dictionaries/" + d.getFolder() + "all.txt")
-                          if(d.remov()) {
-                              if(excluded.find(path) != excluded.end()) excluded.erase(path);
-                              goto another_movie;
-                          }
+            case -26:
+            case -106:
+            case 'w': d.PrintOnlyEnglish();
                       break;
-            case -23:
-            case 'q': if(excluded.find(path) == excluded.end() && path != d.getFolder() + "all") excluded.insert(path);
+            case -94:
+            case -126:
+            case 'd': if(d.GetFileName() != "Dictionaries/" + d.GetFolder() + "all.txt") d.GetRidOf();
+                      break;
+            case -96:
+            case -112:
+            case 'f': d.FindAWord(0);
+                      break;
+            case -84:
+            case 'v': d.FindAWord(1);
+                      break;
+            case -25:
+            case -105:
+            case 'x': d.Exam();
+                      break;
+            case -17:
+            case 'z': if(d.GetFileName() != "Dictionaries/" + d.GetFolder() + "all.txt") {
+                          if(d.Remov()) goto another_movie;
+                      }
+                      break;
+            case -87:
+            case -119:
+            case 'q': if(excluded.find(path) == excluded.end() && path != d.GetFolder() + "all") excluded.insert(path);
                       addToFile(d, 0);
                       goto another_movie;
                       break;
-            case -15:
+            case -31:
+            case -111:
             case 'c': if(excluded.find(path) != excluded.end()) excluded.erase(path);
                       addToFile(d, 1);
                       goto another_movie;
                       break;
-            case -27:
-            case 't': d.determine();
+            case -76:
+            case -123:
+            case 't': d.Determine();
                       break;
-            case -22:
-            case 'r': d.foldersHandler();
+            case -70:
+            case 'r': d.FoldersHandler();
                       break;
-            case -63:
-            case -31:
-            case 60: d.fileUpDown('<');
+            case -125:
+            case '<': d.FileUpDown('<');
                      break;
-            case -34:
-            case -2:
-            case 62: d.fileUpDown('>');
+            case -98:
+            case '>': d.FileUpDown('>');
                      break;
-            case -17:
-            case 'g': d.changeDictionaryName();
+            case -65:
+            case 'g': d.ChangeDictionaryName(excluded);
                       break;
-            case -28:
-            case 'l': if(d.getFileName() != "Dictionaries/" + d.getFolder() + "all.txt") d.showLastAddedWord();
+            case -92:
+            case -124:
+            case 'l': if(d.GetFileName() != "Dictionaries/" + d.GetFolder() + "all.txt") d.ShowLastAddedWord();
                       break;
-            case -18:
+            case -82:
             case 'j': if(structCursorInfo.bVisible == TRUE) structCursorInfo.bVisible = FALSE;
                       else structCursorInfo.bVisible = TRUE;
                       SetConsoleCursorInfo(hConsole, &structCursorInfo);
                       break;
+            case -24:
+            case -104:
+            case 'i': if(d.GetFileName() == "Dictionaries/all.txt") d.InterestingInfo();
             default:  break;
         }
-        if(d.getFileName() == "") goto another_movie;
-    }while(ch != 'e' && ch != -13);
-    if(excluded.find(d.getFileName().substr(13, d.getFileName().size() - 17)) == excluded.end())
+        if(d.GetFileName() == "") goto another_movie;
+    }while(choice != 'e' && choice != -29 && choice != -109);
+    if(excluded.find(d.GetFileName().substr(13, d.GetFileName().size() - 17)) == excluded.end())
         addToFile(d, 1);
     else addToFile(d, 0);
     ofstream fout("Dictionaries/__excluded__.txt");
@@ -699,12 +678,12 @@ void dirCommand(map<string, vector<string>>& films, string& film_name)
             cout << options[changeCursor_from];
             y = changeCursor_to - firstRowNumber;
             setPosition(8, y);
-            Dictionary::setColor(HIGHLIGHTING);
+            setColor(HIGHLIGHTING);
             _setmode(_fileno(stdout), _O_U16TEXT);
             wcout << wstrOptions[changeCursor_to];
             _setmode(_fileno(stdout), _O_TEXT);
             cout << options[changeCursor_to];
-            Dictionary::setColor(15);
+            setColor(WHITE);
         }
         else {
             system("cls");
@@ -713,12 +692,12 @@ void dirCommand(map<string, vector<string>>& films, string& film_name)
             for(int i = startWith; i < options.size() && i < screenHeight + startWith; ++i) {
                 if(i == startWith && firstRowNumber != -1) cout << "\t";
                 else cout << "\n\t";
-                if(i == cursorPos) Dictionary::setColor(HIGHLIGHTING);
+                if(i == cursorPos) setColor(HIGHLIGHTING);
                 _setmode(_fileno(stdout), _O_U16TEXT);
                 wcout << wstrOptions[i];
                 _setmode(_fileno(stdout), _O_TEXT);
                 cout << options[i];
-                Dictionary::setColor(15);
+                setColor(WHITE);
             }
         }
     }
@@ -736,7 +715,7 @@ void renew(map<string, vector<string>>& films)
             folder = "papka__" + it->first.substr(0, it->first.size() - 1) + "/";
             for(int i = 0; i < it->second.size(); ++i) {
                 path = folder + it->second[i];
-                Dictionary::demonstrationToPath(path);
+                demonstrationToPath(path);
                 if(excluded.find(path) == excluded.end()) {
                     setPosition(33, 1);
                     if(R) cout << "RENEW";
@@ -750,7 +729,7 @@ void renew(map<string, vector<string>>& films)
         }
         else {
             path = it->first;
-            Dictionary::demonstrationToPath(path);
+            demonstrationToPath(path);
             if(excluded.find(path) == excluded.end()) {
                 setPosition(33, 1);
                 if(R) cout << "RENEW";
@@ -761,33 +740,5 @@ void renew(map<string, vector<string>>& films)
                 delete temp;
             }
         }
-    }
-}
-
-pair<int, int> getScreenWH()
-{
-    HANDLE hWndConsole;
-    if(hWndConsole = GetStdHandle(-12))
-    {
-        CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
-        if(GetConsoleScreenBufferInfo(hWndConsole, &consoleInfo)) {
-            int width  = consoleInfo.srWindow.Right  - consoleInfo.srWindow.Left + 1;
-            int height = consoleInfo.srWindow.Bottom - consoleInfo.srWindow.Top  + 1;
-            return {width, height};
-        }
-        else exit(-1);
-    }
-    else exit(-1);
-}
-
-void setPosition(int x, int y)
-{
-    static COORD coord;
-    coord.X = x;
-    coord.Y = y;
-    static HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    if(!SetConsoleCursorPosition(hConsole, coord)) {
-        cout << "\nError: " << GetLastError() << "\n";
-        exit(1);
     }
 }
