@@ -325,8 +325,8 @@ int main()
     }
     while(film_name[0] == ' ') film_name.erase(0, 1);
     while(film_name.back() == ' ') film_name.pop_back();
+    if(film_name.size() && film_name[0] == '\\') film_name.erase(0, 1);
     if(film_name == "") goto another_movie;
-    if(film_name[0] == '\\') film_name.erase(0, 1);
     demonstrationToPath(film_name);
     if(film_name.find(">") != string::npos) film_name[film_name.find(">")] = '/';
     if(film_name.find("/") != string::npos && film_name.substr(0, 7) != "papka__") {
@@ -344,11 +344,10 @@ int main()
         film_name = "papka__" + film_name;
     }
     else {
-        string folder = "";
-        string file = film_name;
-        if(film_name.substr(0, 7) == "papka__") {
-            folder = film_name.substr(0, film_name.find("/"));
+        string file = film_name, folder = "";
+        if(file.find("/") != string::npos) {
             file = film_name.substr(film_name.find("/") + 1);
+            folder = film_name.substr(0, film_name.find("/"));
         }
         folderInfo.AddFile(file, folder);
     }

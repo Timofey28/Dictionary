@@ -25,7 +25,7 @@ public:
     void Print();
     void PrintOnlyEnglish();
     void Add();
-    void AddSomeMeanings(std::string s);
+    void AddSomeMeanings(std::string word = "");
     void FindAWord(bool findAmongAll = 0);
     void GetRidOf();
     void Exam();
@@ -34,7 +34,7 @@ public:
     std::string GetFileName() {return file;}
     bool Remov();
     friend void addToFile(Dictionary& x, bool saveInAll);
-    int Determine(std::string word);
+    int Determine(std::string word = "");
     void FoldersHandler();
     void FileUpDown(char);
     void ChangeDictionaryName(std::set<std::string>& excluded);

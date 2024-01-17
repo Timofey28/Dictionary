@@ -149,17 +149,6 @@ void FolderInfo::AddFile(string file, string folder)
     }
 }
 
-void FolderInfo::AddFolder(string folder)
-{
-    TransformPathIntoMovieTitle(folder, 1);
-    if(elements.find(folder) == elements.end() ||
-       find(elements[folder].begin(), elements[folder].end(), "all") == elements[folder].end())
-    {
-        // вторая часть условия на случай если папка уже существует, но файла "all.txt" по каким-то причинам нет
-        elements[folder].push_back("all");
-    }
-}
-
 void FolderInfo::DeleteFile(string file)
 {
     if(file.substr(0, 13) == "Dictionaries/") file.erase(0, 13);
@@ -204,6 +193,24 @@ void FolderInfo::DeleteFile(string file)
     }
 }
 
+void FolderInfo::AddFolder(string folder)
+{
+    TransformPathIntoMovieTitle(folder, 1);
+    if(elements.find(folder) == elements.end() ||
+       find(elements[folder].begin(), elements[folder].end(), "all") == elements[folder].end())
+    {
+        // вторая часть условия на случай если папка уже существует, но файла "all.txt" по каким-то причинам нет
+        elements[folder].push_back("all");
+    }
+}
+
+void FolderInfo::DeleteFolder(string folder)
+{
+    TransformPathIntoMovieTitle(folder, 1);
+    auto it = elements.find(folder);
+    if(it != elements.end()) elements.erase(it);
+}
+
 bool FolderInfo::IsDateWithYear(const string& title, int& correspondingValue)
 {
     set<int> digitIndexes = {0, 1,  3, 4,  6, 7};
@@ -242,7 +249,7 @@ bool FolderInfo::IsDateWithoutYear(const string& title, int& correspondingValue)
     return 1;
 }
 
-string FolderInfo::TransformMovieTitleIntoPath(string& movieTitle)
+string FolderInfo::TransformMovieTitleIntoPath(string movieTitle, bool includeMainFolder)
 {
     assert(movieTitle != "");
     for(int i = 0; i < movieTitle.size(); ++i) {
@@ -250,13 +257,14 @@ string FolderInfo::TransformMovieTitleIntoPath(string& movieTitle)
             movieTitle[i] = title2path[movieTitle[i]];
     }
     if(movieTitle.find("/") != string::npos && movieTitle.substr(0, 7) != "papka__") movieTitle = "papka__" + movieTitle;
-    if(movieTitle.substr(0, 13) != "Dictionaries/") movieTitle = "Dictionaries/" + movieTitle;
-    if(movieTitle.substr(movieTitle.size() - 4) != ".txt") movieTitle += ".txt";
+    if(includeMainFolder && movieTitle.substr(0, 13) != "Dictionaries/") movieTitle = "Dictionaries/" + movieTitle;
+    if(movieTitle.size() < 4 || movieTitle.substr(movieTitle.size() - 4) != ".txt") movieTitle += ".txt";
     return movieTitle;
 }
 
 string FolderInfo::TransformPathIntoMovieTitle(std::string& path, bool isSurelyAFolder)
 {
+    if(path == "") return path;
     if(path.substr(0, 13) == "Dictionaries/") path.erase(0, 13);
     if(path.back() == '/') path.pop_back();
     assert(path.find("/") == string::npos);
@@ -291,6 +299,38 @@ bool FolderInfo::FolderExists(string folder)
 {
     TransformPathIntoMovieTitle(folder, 1);
     return elements.find(folder) != elements.end();
+}
+
+vector<string> FolderInfo::GetAllFilmsInSingleContainer()
+{
+    vector<string> result;
+    for(auto it = elements.begin(); it != elements.end(); ++it) {
+        if(it->second.size()) {
+            for(const auto& film : it->second)
+                result.push_back(it->first.substr(0, it->first.size() - 1) + "/" + film);
+        }
+        else result.push_back(it->first);
+    }
+    return result;
+}
+
+vector<string> FolderInfo::GetAllPathsInSingleContainer()
+{
+    vector<string> result;
+    string path;
+    for(auto it = elements.begin(); it != elements.end(); ++it) {
+        if(it->second.size()) {
+            for(auto film : it->second) {
+                path = it->first.substr(0, it->first.size() - 1) + "/" + film;
+                result.push_back(TransformMovieTitleIntoPath(path));
+            }
+        }
+        else {
+            path = it->first;
+            result.push_back(TransformMovieTitleIntoPath(path));
+        }
+    }
+    return result;
 }
 
 vector<string> FolderInfo::GetFilesFromFolder(string folder)

@@ -24,11 +24,14 @@ class FolderInfo
 public:
     FolderInfo();
     std::map<std::string, std::vector<std::string>> GetAllFilms() { return elements; }
+    std::vector<std::string> GetAllFilmsInSingleContainer();
+    std::vector<std::string> GetAllPathsInSingleContainer();
     std::vector<std::string> GetFilesFromFolder(std::string folder = "");
     std::vector<std::string> GetAllFolders();
-    std::string TransformMovieTitleIntoPath(std::string& movieTitle);
+    std::string TransformMovieTitleIntoPath(std::string movieTitle, bool includeMainFolder = 1);
     void AddFile(std::string file, std::string folder = "");
     void AddFolder(std::string folder);
     void DeleteFile(std::string file);
+    void DeleteFolder(std::string folder);
     bool FolderExists(std::string folder);
 };
