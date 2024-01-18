@@ -18,7 +18,6 @@ FolderInfo folderInfo;
 
 void dirCommand(map<string, vector<string>>& films, string& film_name);
 void renew(map<string, vector<string>>& films);
-pair<int, int> getScreenWH();
 
 int main()
 {
@@ -503,7 +502,7 @@ void dirCommand(map<string, vector<string>>& films, string& film_name)
 {
     if(!films.size()) return;
     const int HIGHLIGHTING = 12;
-    int screenHeight = getScreenWH().second;
+    int screenHeight = getConsoleWH().second;
     vector<string> options, fullPaths;
     vector<wstring> wstrOptions;
     for(auto it = films.begin(); it != films.end(); ++it) {
@@ -537,7 +536,7 @@ void dirCommand(map<string, vector<string>>& films, string& film_name)
     int changeCursor_from, changeCursor_to;
     while(1) {
         changeCursorOnly = 0;
-        screenHeight = getScreenWH().second;
+        screenHeight = getConsoleWH().second;
         choice = _getch();
         if(choice == 'k' || choice == -85)      goto arrowUp_dirCommand;       // up
         else if(choice == 'j' || choice == -82) goto arrowDown_dirCommand;     // down;

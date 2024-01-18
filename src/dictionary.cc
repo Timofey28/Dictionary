@@ -35,12 +35,24 @@ Dictionary::Dictionary(string file_name)
 
 void Dictionary::InterestingInfo()
 {
-    int nConsoleWidth = getScreenWH().first;
-    int nConsoleHeight = getScreenWH().second;
+    int minimumWidth = 86;
+    int nConsoleWidth, nConsoleHeight;
+    getConsoleWH(nConsoleWidth, nConsoleHeight);
+    if(nConsoleWidth < minimumWidth) {
+        system("cls");
+        string answer = "Console is not wide enough, should be at least " + to_string(minimumWidth) +
+                        " characters, you need " + to_string(minimumWidth - nConsoleWidth) + " more";
+        cout << "\n\t" << ModifyString(answer, nConsoleWidth - 16, 0);;
+        cin.sync();
+        _getch();
+        return;
+    }
+
     int highestPossibleColumn = nConsoleHeight - 4;
     map<char, int> frequency;
     for(char c = 'a'; c <= 'z'; c++) frequency[c] = 0;
     for(auto it = dict.begin(); it != dict.end(); ++it) {
+        if(it->first[0] < 'a' || it->first[0] > 'z') continue;
         frequency[it->first[0]]++;
 //        for(int i = 1; i < it->first.size(); ++i) {
 //            if(!ispunct(it->first[i]) && !isspace(it->first[i])) frequency[it->first[i]]++;
@@ -975,70 +987,56 @@ void Dictionary::FindAWord(bool findAmongAll)
     }
     map<string, vector<string>> dictToSearchIn(dict);
     if(findAmongAll) dictToSearchIn.insert(all_dict.begin(), all_dict.end());
-    system("cls");
-    int height, width;
-    HANDLE hWndConsole;
-    if(hWndConsole = GetStdHandle(-12)) {
-        CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
-        if(GetConsoleScreenBufferInfo(hWndConsole, &consoleInfo)) {
-            height = consoleInfo.srWindow.Bottom - consoleInfo.srWindow.Top + 1;
-            width = consoleInfo.srWindow.Right - consoleInfo.srWindow.Left + 1;
-        }
-        else exit(-2);
+    if(!dictToSearchIn.size()) {
+        cout << "\n\tNo words yet";
+        _getch();
+        return;
     }
-    else exit(-2);
+    int width, height;
+    getConsoleWH(width, height);
     width -= 16;
     bool up = 1;
     COORD coord;
     int downY, leftX;
-    if(!dictToSearchIn.size()) {
-        cout << "\n\tNo words yet";
-        c[0] = _getch();
-        return;
-    }
-    int wordsAmountUpper, wordsAmountLower;
-    string wordUpper, wordLower;
+    char inputBuffer = '.';  // сначала присваиваем любой символ не являющийся цифрой
+    vector<string> foundWords;
     if(word.size()) goto firstTime;
+
     if(findAmongAll || file == "Dictionaries/all.txt") setColor(PURPLE);
     else setColor(GRAY);
+    system("cls");
     cout << "\n\tInput: ";
     char sym;
     cin.sync();
     while(1) {
         sym = _getch();
         if(sym == 13 || sym == 27) return; // enter || escape
-        else if(sym == 9) { // tab
-            if(wordsAmountUpper == 1 || wordsAmountUpper && wordsAmountLower != 1) {
-                int res = Determine(wordUpper);
-                if(res == 1) {
-                    wordsAmountUpper = 0;
-                    wordsAmountLower = 0;
-                    goto firstTime;
+        if(sym == 9) { // tab
+            if(foundWords.size()) {
+                int wordNo = 0;
+                if(isdigit(inputBuffer) && inputBuffer != '0') {
+                    wordNo = min((int) inputBuffer - 49, (int) foundWords.size() - 1);
+                    inputBuffer = '.';
                 }
-                else if(!res) return;
+                assert(wordNo >= 0 && wordNo < foundWords.size());
+                int res = Determine(foundWords[wordNo]);
+                assert(res == 0 || res == 1);
+                if(res == 1) goto firstTime;
+                else if(res == 0) return;
             }
-            else if(wordsAmountLower) {
-                int res = Determine(wordLower);
-                if(res == 1) {
-                    wordsAmountUpper = 0;
-                    wordsAmountLower = 0;
-                    goto firstTime;
-                }
-                else if(!res) return;
-            }
-            else continue;
+            continue;
         }
-        else if(sym == 8) { // backspace
-            wordsAmountUpper = 0;
-            wordsAmountLower = 0;
+
+        inputBuffer = sym;
+        if(isdigit(inputBuffer)) continue;
+
+        if(sym == 8) { // backspace
             if(word.size()) {
                 word.pop_back();
                 lettersEntered.pop_back();
             }
         }
         else if(sym == 127) { // ctrl + backspace
-            wordsAmountUpper = 0;
-            wordsAmountLower = 0;
             if(word == "") continue;
             while(word.back() == '_' || word.back() == ' ') {
                 word.pop_back();
@@ -1072,8 +1070,7 @@ void Dictionary::FindAWord(bool findAmongAll)
                 }
                 do coord.Y = max(0, coord.Y - 1);
                 while(getChar(leftX + 1, coord.Y) == ' ' && coord.Y);
-                if(!SetConsoleCursorPosition(hWndConsole, coord))
-                    cout << "\nError: " << GetLastError() << "\n";
+                setPosition(coord);
             }
             else if(sym == 80) { // стрелка вниз
                 if(up) {
@@ -1082,8 +1079,7 @@ void Dictionary::FindAWord(bool findAmongAll)
                 }
                 do coord.Y = min(downY, coord.Y + 1);
                 while(getChar(leftX + 1, coord.Y + 1) == ' ' && coord.Y != downY);
-                if(!SetConsoleCursorPosition(hWndConsole, coord))
-                    cout << "\nError: " << GetLastError() << "\n";
+                setPosition(coord);
             }
             else if(sym == 73 || sym == -115) { // PgUp || Ctrl + Up
                 if(!up) {
@@ -1092,8 +1088,7 @@ void Dictionary::FindAWord(bool findAmongAll)
                 }
                 coord.Y = max(0, coord.Y - height + 1);
                 if(coord.Y) while(getChar(leftX + 1, coord.Y) == ' ') coord.Y += 1;
-                if(!SetConsoleCursorPosition(hWndConsole, coord))
-                    cout << "\nError: " << GetLastError() << "\n";
+                setPosition(coord);
             }
             else if(sym == 81 || sym == -111) { // PgDn || Ctrl + down
                 if(up) {
@@ -1102,14 +1097,11 @@ void Dictionary::FindAWord(bool findAmongAll)
                 }
                 coord.Y = min(downY, coord.Y + height - 1);
                 if(coord.Y < downY) while(getChar(leftX + 1, coord.Y + 1) == ' ') coord.Y -= 1;
-                if(!SetConsoleCursorPosition(hWndConsole, coord))
-                    cout << "\nError: " << GetLastError() << "\n";
+                setPosition(coord);
             }
             continue;
         }
         else {
-            wordsAmountUpper = 0;
-            wordsAmountLower = 0;
             c[0] = sym;
             OemToCharA(c, c);
             if(!isalpha(c[0])) {
@@ -1136,44 +1128,40 @@ void Dictionary::FindAWord(bool findAmongAll)
         if(findAmongAll || file == "Dictionaries/all.txt") setColor(PURPLE);
         else setColor(GRAY);
         cout << "\n\tInput: ";
+        if(!word.size()) continue;
         string wordToShow = word;
         for(int i = 0; i < wordToShow.size(); ++i)
             if(wordToShow[i] == '_') wordToShow[i] = ' ';
         setColor(GOLD);
         cout << wordToShow;
         setColor(WHITE);
-        if(!word.size()) continue;
         bool no_words = 1;
         cout << "\n";
 
+        foundWords.clear();
         if(count(lettersEntered.begin(), lettersEntered.end(), 1) == lettersEntered.size()) { // english
-            wordUpper = "";
             for(auto it = dictToSearchIn.begin(); it != dictToSearchIn.end(); ++it) {
                 if(_kbhit()) continue;
                 string temp = it->first;
                 if(temp.find(word) == 0) {
                     PrintAWord(temp, 0, "", SEA_WAVE, findAmongAll);
                     no_words = 0;
-                    wordsAmountUpper++;
-                    if(wordUpper == "") wordUpper = temp;
+                    foundWords.push_back(temp);
                 }
                 else if(temp.find(word) < (1<<30)) no_words = 0;
             }
             if(!no_words) cout << "\n\n\t------------------------------------------\n";
-            wordLower = "";
             for(auto it = dictToSearchIn.begin(); it != dictToSearchIn.end(); ++it) {
                 if(_kbhit()) continue;
                 string temp = it->first;
                 if(temp.find(word) != string::npos && temp.find(word)) {
                     PrintAWord(temp, 0, word, GRAY, findAmongAll);
                     no_words = 0;
-                    wordsAmountLower++;
-                    if(wordLower == "") wordLower = temp;
+                    foundWords.push_back(temp);
                 }
             }
         }
         else if(count(lettersEntered.begin(), lettersEntered.end(), 0) == lettersEntered.size()) { // russian
-            wordUpper = "";
             for(auto it = dictToSearchIn.begin(); it != dictToSearchIn.end(); ++it) {
                 if(_kbhit()) continue;
                 vector<string> meaning = it->second;
@@ -1187,8 +1175,7 @@ void Dictionary::FindAWord(bool findAmongAll)
                     if(pos != string::npos && pos != 0) {
                         no_words = 0;
                         string key = it->first;
-                        wordsAmountUpper++;
-                        if(wordUpper == "") wordUpper = key;
+                        foundWords.push_back(key);
                         for(int j = 0; j < key.size(); ++j)
                             if(key[j] == '_') key[j] = ' ';
                         setColor(SEA_WAVE);
@@ -1197,8 +1184,6 @@ void Dictionary::FindAWord(bool findAmongAll)
                         cout << " --";
                         setColor(GRAY);
                         string whitespaces(it->first.size() + 12, ' ');
-                        int spacesOneMeaning = it->first.size() + 12,
-                            spacesFewMeanings = it->first.size() + 15;
                         if(meaning.size() == 1 && meaning[0] != " ") {
                             pos = meaning[0].find(word);
                             if(pos == string::npos) cout << meaning[0];
@@ -1252,13 +1237,9 @@ void Dictionary::FindAWord(bool findAmongAll)
         downY = coord.Y;
         coord.X = 15 + word.size();
         coord.Y = 0;
-        hWndConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-        if(!SetConsoleCursorPosition(hWndConsole, coord))
-            cout << "Error: " << GetLastError() << "\n";
+        setPosition(coord);
         coord.Y = 1;
-        hWndConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-        if(!SetConsoleCursorPosition(hWndConsole, coord))
-            cout << "Error: " << GetLastError() << "\n";
+        setPosition(coord);
         coord.Y = 0;
     }
 }

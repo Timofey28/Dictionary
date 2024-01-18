@@ -98,7 +98,7 @@ void setPosition(COORD coord)
     }
 }
 
-std::pair<int, int> getScreenWH()
+std::pair<int, int> getConsoleWH()
 {
     HANDLE hWndConsole;
     if(hWndConsole = GetStdHandle(-12))
@@ -108,6 +108,21 @@ std::pair<int, int> getScreenWH()
             int width  = consoleInfo.srWindow.Right  - consoleInfo.srWindow.Left + 1;
             int height = consoleInfo.srWindow.Bottom - consoleInfo.srWindow.Top  + 1;
             return {width, height};
+        }
+        else exit(-1);
+    }
+    else exit(-1);
+}
+
+void getConsoleWH(int& nConsoleWidth, int& nConsoleHeight)
+{
+    HANDLE hWndConsole;
+    if(hWndConsole = GetStdHandle(-12))
+    {
+        CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
+        if(GetConsoleScreenBufferInfo(hWndConsole, &consoleInfo)) {
+            nConsoleWidth  = consoleInfo.srWindow.Right  - consoleInfo.srWindow.Left + 1;
+            nConsoleHeight = consoleInfo.srWindow.Bottom - consoleInfo.srWindow.Top  + 1;
         }
         else exit(-1);
     }
