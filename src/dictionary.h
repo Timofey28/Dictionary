@@ -14,10 +14,9 @@ class Dictionary
     void ReadDic(std::string path, std::map<std::string, std::vector<std::string>>& dic, bool clearItFirst = 1);
     void WriteInDic(std::string path, const std::map<std::string, std::vector<std::string>>& dic);
     std::string ModifyString(std::string s, int width, int indent);
-    void GetRidOfSpaces(std::string& phrase, char sym = ' ');
     void FoldersHandlerInstructions(std::string command);
     bool YesOrNo();
-    bool FileIsExcluded(std::string fileName = "", std::string folderName = "...");
+
 public:
     bool isInAll;
 
@@ -30,15 +29,15 @@ public:
     void GetRidOf();
     void Exam();
     int GetSize() {return dict.size();}
-    std::string GetFolder() {return folder;}
-    std::string GetFileName() {return file;}
+    std::string GetFolder() { return folder; }
+    std::string GetFileName() { return file; }
     bool Remov();
     friend void addToFile(Dictionary& x, bool saveInAll);
     int Determine(std::string word = "");
     void FoldersHandler();
     void FileUpDown(char);
-    void ChangeDictionaryName(std::set<std::string>& excluded);
+    void ChangeDictionaryName();
     void ShowLastAddedWord();
-
     void InterestingInfo();
+    void CheckDictionariesExclusion();
 };

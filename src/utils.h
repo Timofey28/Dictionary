@@ -128,3 +128,16 @@ void getConsoleWH(int& nConsoleWidth, int& nConsoleHeight)
     }
     else exit(-1);
 }
+
+void getRidOfSpaces(std::string& phrase, char sym = ' ')
+{
+    while(phrase[0] == sym) phrase.erase(0, 1);
+    while(phrase.back() == sym) phrase.pop_back();
+    int l = 1;
+    while(l < phrase.size()) {
+        if(phrase[l] == sym && phrase[l-1] == sym) {
+            phrase.erase(l--, 1);
+        }
+        l++;
+    }
+}

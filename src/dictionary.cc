@@ -6,7 +6,6 @@
 #include <cassert>
 using namespace std;
 
-extern set<string> excluded;
 extern FolderInfo folderInfo;
 
 Dictionary::Dictionary(string file_name)
@@ -151,6 +150,94 @@ void Dictionary::InterestingInfo()
         }
     }
     setColor(WHITE);
+    _getch();
+}
+
+void Dictionary::CheckDictionariesExclusion()
+{
+    if(folder == "") return;
+    system("cls");
+    vector<string> dictionaries = folderInfo.GetFilesFromFolder(folder);
+    int width, height;
+    getConsoleWH(width, height);
+    if(height - 2 < dictionaries.size()) {
+        int rowsNeeded = dictionaries.size() - (height-2);
+        cout << "\n\tNot enough space, " << rowsNeeded << " more row";
+        cout << (rowsNeeded == 1 ? " is needed" : "s are needed");
+        cin.sync();
+        _getch();
+        return;
+    }
+
+    int cursor = -1;
+    for(int i = 0; i < dictionaries.size(); ++i) {
+        if(folderInfo.MovieIsExcluded(folder + dictionaries[i])) setColor(SEA_WAVE);
+        else setColor(BEIGE);
+        cout << "\n\t" << dictionaries[i];
+        if(cursor == -1 && folderInfo.TransformMovieTitleIntoPath(folder + dictionaries[i]) == file) cursor = i;
+    }
+    const int ARROW_COLOR = GOLD;
+    const char arrow = 26;
+    setPosition(6, cursor + 1);
+    setColor(ARROW_COLOR);
+    cout << arrow;
+
+    char choice;
+    while(1) {
+        choice = _getch();
+        if(choice == -32 && _kbhit()) choice = _getch();
+        else choice = tolower(choice);
+        if(choice == 80 || choice == 'j' || choice == -82 || choice == -98) {
+            setPosition(6, cursor + 1);
+            setColor(0);
+            cout << " ";
+            if(cursor == dictionaries.size() - 1) cursor = 0;
+            else cursor++;
+            setPosition(6, cursor + 1);
+            setColor(ARROW_COLOR);
+            cout << arrow;
+        }
+        else if(choice == 72 || choice == 'k' || choice == -85 || choice == -117) {
+            setPosition(6, cursor + 1);
+            setColor(0);
+            cout << " ";
+            if(cursor == 0) cursor = dictionaries.size() - 1;
+            else cursor--;
+            setPosition(6, cursor + 1);
+            setColor(ARROW_COLOR);
+            cout << arrow;
+        }
+        else if(choice == 'q' || choice == -87 || choice == -119) {
+            if(dictionaries[cursor] == "all") continue;
+            if(folderInfo.MovieIsExcluded(folder + dictionaries[cursor])) {
+                folderInfo.RemoveFromExcluded(folder + dictionaries[cursor]);
+                setPosition(8, cursor + 1);
+                setColor(BEIGE);
+                cout << dictionaries[cursor];
+            }
+            else {
+                folderInfo.AddToExcluded(folder + dictionaries[cursor]);
+                setPosition(8, cursor + 1);
+                setColor(SEA_WAVE);
+                cout << dictionaries[cursor];
+            }
+        }
+        else if(choice == 13 || choice == 9) {  // enter || tab
+            string newFile = folderInfo.TransformMovieTitleIntoPath(folder + dictionaries[cursor]);
+            if(newFile != file) {
+                if(folderInfo.MovieIsExcluded(file)) addToFile(*this, 0);
+                else addToFile(*this, 1);
+                Dictionary *temp = new Dictionary(newFile.substr(13, newFile.size() - 17));
+                file = newFile;
+                dict = temp->dict;
+                all_dict = temp->all_dict;
+                innerAll_dict = temp->innerAll_dict;
+                delete temp;
+            }
+            setColor(WHITE);
+            return;
+        }
+    }
     _getch();
 }
 
@@ -597,7 +684,7 @@ void Dictionary::Add()
     strcpy(c, word.c_str());
     OemToCharA(c, c);
     word = c;
-    GetRidOfSpaces(word);
+    getRidOfSpaces(word);
     if(word == "") return;
     if(dict.find(word) != dict.end()) {
         system("cls");
@@ -674,7 +761,7 @@ void Dictionary::Add()
         PrintAWord(word, 0, "", GREEN, 1);
         cout << "\n\n\n\tДобавить с только что введенными значениями     "; setColor(SEA_WAVE); cout << "[y]"; setColor(WHITE);
         if(startingMeaning != all_dict[word]) {
-            cout << "\n\tДобавить с текущими значениями                  "; setColor(SEA_WAVE); cout << "[s]"; setColor(WHITE);
+            cout << "\n\tДобавить с этими значениями                     "; setColor(SEA_WAVE); cout << "[s]"; setColor(WHITE);
         }
         cout <<     "\n\tПосмотреть в каких словарях оно находится       "; setColor(SEA_WAVE); cout << "[t]"; setColor(WHITE);
         cout <<     "\n\tОставить как есть                               "; setColor(SEA_WAVE); cout << "[n]"; setColor(WHITE);
@@ -758,14 +845,14 @@ void Dictionary::AddSomeMeanings(string word)
         cin.getline(c, 200);
         OemToCharA(c, c);
         word = c;
-        GetRidOfSpaces(word);
+        getRidOfSpaces(word);
         if(word == "") {
             cout << "\n\tWhich word to change?\n\n\t=>";
             cin.sync();
             cin.getline(c, 200);
             OemToCharA(c, c);
             word = c;
-            GetRidOfSpaces(word);
+            getRidOfSpaces(word);
             system("cls");
         }
     }
@@ -914,10 +1001,8 @@ void Dictionary::AddSomeMeanings(string word)
                     if(meaning[i] == ' ') meaning[i] = '_';
                 if(dict.find(meaning) == dict.end() && all_dict.find(meaning) == all_dict.end()) {
                     map<string, vector<string>> excludedDictionaries;
-                    for(auto it = excluded.begin(); it != excluded.end(); ++it) {
-                        string path = "Dictionaries/" + *it + ".txt";
-                        ReadDic(path, excludedDictionaries, 0);
-                    }
+                    for(const auto& excludedPath : folderInfo.GetExcludedPaths())
+                        ReadDic(excludedPath, excludedDictionaries, 0);
                     if(excludedDictionaries.find(meaning) == excludedDictionaries.end()) {
                         dict[meaning] = dict[word];
                         dict.erase(dict.find(word));
@@ -960,7 +1045,7 @@ void Dictionary::FindAWord(bool findAmongAll)
     string word = "";
     if(cin.peek() != '\n') {
         getline(cin, word);
-        GetRidOfSpaces(word);
+        getRidOfSpaces(word);
         for(int i = 0; i < word.size(); ++i) {
             c[0] = word[i];
             OemToCharA(c, c);
@@ -1271,7 +1356,7 @@ void Dictionary::GetRidOf()
         OemToCharA(c, c);
         word = c;
     }
-    GetRidOfSpaces(word);
+    getRidOfSpaces(word);
     for(int i = 0; i < word.size(); ++i)
         if(word[i] == ' ') word[i] = '_';
     bool leaveWordInAll = 0;
@@ -1280,7 +1365,7 @@ void Dictionary::GetRidOf()
         while(word.find('*') != string::npos)
             word.replace(word.find('*'), 1, "");
         leaveWordInAll = 1;
-        GetRidOfSpaces(word, '_');
+        getRidOfSpaces(word, '_');
     }
     if(word.size() > 1 && word[0] == '/') word.erase(0, 1);
     else if(word == "ю" || word == ".") {
@@ -1372,7 +1457,7 @@ void Dictionary::Exam()
         cin.getline(a, 255);
         OemToCharA(a, a);
         string temp(a);
-        GetRidOfSpaces(temp);
+        getRidOfSpaces(temp);
         answer = temp;
 
         if(answer == "all" || answer == "фдд") {
@@ -1480,7 +1565,7 @@ bool Dictionary::Remov()
     if(innerAll_file != "") WriteInDic(innerAll_file, innerAll_dict);
     remove(file.c_str());
     folderInfo.DeleteFile(file);
-    if(FileIsExcluded()) excluded.erase(file.substr(13, file.size() - 17));
+    folderInfo.RemoveFromExcluded(file);
     file = innerAll_file;
     innerAll_dict.clear();
     if(file != "") {
@@ -1513,11 +1598,9 @@ void addToFile(Dictionary &x, bool saveInAll)
 
 int Dictionary::Determine(string word)
 {
-    string path;
     if(file != "Dictionary/all.txt") {
-        path = file.substr(13, file.size() - 17);
-        if(excluded.find(path) == excluded.end()) addToFile(*this, 1);
-        else addToFile(*this, 0);
+        if(folderInfo.MovieIsExcluded(file)) addToFile(*this, 0);
+        else addToFile(*this, 1);
     }
     system("cls");
     char c[200];
@@ -1527,14 +1610,14 @@ int Dictionary::Determine(string word)
         cin.getline(c, 200);
         OemToCharA(c, c);
         word = c;
-        GetRidOfSpaces(word);
+        getRidOfSpaces(word);
         if(word == "") {
             cout << "\n\tWhich word to find?\n\n\t=> ";
             cin.sync();
             cin.getline(c, 200);
             OemToCharA(c, c);
             word = c;
-            GetRidOfSpaces(word);
+            getRidOfSpaces(word);
             system("cls");
         }
     }
@@ -1561,6 +1644,7 @@ int Dictionary::Determine(string word)
     vector<string> films = folderInfo.GetAllFilmsInSingleContainer();
     map<string, vector<string>> intermediateDictionary;
     map<string, int> found;
+    string path;
     for(auto film : films) {
         path = folderInfo.TransformMovieTitleIntoPath(film);
         if(path.find("/all.txt") != string::npos) continue;
@@ -1644,7 +1728,7 @@ void Dictionary::FoldersHandler()
     cout << "\n";
     string choice;
     getline(cin, choice);
-    GetRidOfSpaces(choice);
+    getRidOfSpaces(choice);
     bool out = 0;
     if(choice != "") out = 1;
     for(int i = 0; i < choice.size(); ++i)
@@ -1668,7 +1752,7 @@ void Dictionary::FoldersHandler()
             }
             needInstructions = 0;
             string newFolderName = choice.substr(6);
-            GetRidOfSpaces(newFolderName);
+            getRidOfSpaces(newFolderName);
             if(newFolderName == "") goto thatsall;
             string folderName = newFolderName;
             demonstrationToPath(newFolderName);
@@ -1703,7 +1787,7 @@ void Dictionary::FoldersHandler()
             needInstructions = 0;
             bool deleteFolderIAmInRightNow;
             string folderToDelete = choice.substr(6);
-            GetRidOfSpaces(folderToDelete);
+            getRidOfSpaces(folderToDelete);
             if(folderToDelete == "") goto thatsall;
             if(folderToDelete == "this") {
                 if(folder == "") goto thatsall;
@@ -1764,9 +1848,8 @@ void Dictionary::FoldersHandler()
                 if(!out) cout << "\n";
                 goto thatsall;
             }
-            string path = file.substr(13, file.size() - 17);
-            if(excluded.find(path) == excluded.end()) addToFile(*this, 1);
-            else addToFile(*this, 0);
+            if(folderInfo.MovieIsExcluded(file)) addToFile(*this, 0);
+            else addToFile(*this, 1);
             for(int i = 0; i < filesLeft.size(); ++i) {
                 demonstrationToPath(filesLeft[i]);
                 string source = folderToDelete + "/" + filesLeft[i] + ".txt";
@@ -1775,10 +1858,9 @@ void Dictionary::FoldersHandler()
                     continue;
                 }
                 string destination = "Dictionaries/" + filesLeft[i] + ".txt";
-                path = source.substr(13, source.size() - 17);
-                if(excluded.find(path) != excluded.end()) {
-                    excluded.erase(path);
-                    excluded.insert(destination.substr(13, destination.size() - 17));
+                if(folderInfo.MovieIsExcluded(source)) {
+                    folderInfo.RemoveFromExcluded(source);
+                    folderInfo.AddToExcluded(destination);
                 }
                 rename(source.c_str(), destination.c_str());
                 folderInfo.AddFile(filesLeft[i]);
@@ -1821,7 +1903,7 @@ void Dictionary::FoldersHandler()
                 goto thatsall;
             }
             string folderName = choice.substr(6);
-            GetRidOfSpaces(folderName);
+            getRidOfSpaces(folderName);
             if(folderName == "") goto thatsall;
             demonstrationToPath(folderName);
             folderName = "Dictionaries/papka__" + folderName;
@@ -1836,10 +1918,9 @@ void Dictionary::FoldersHandler()
             folderInfo.DeleteFile(file);
             folderName += file.substr(file.rfind("/")); // "Dictionaries/papka__test/film.txt"
             rename(file.c_str(), folderName.c_str());
-            string path = file.substr(13, file.size() - 17);
-            if(excluded.find(path) != excluded.end()) {
-                excluded.erase(path);
-                excluded.insert(folderName.substr(13, folderName.size() - 17));
+            if(folderInfo.MovieIsExcluded(file)) {
+                folderInfo.RemoveFromExcluded(file);
+                folderInfo.AddToExcluded(folderName);
             }
             file = folderName;
             folderName = folderName.substr(13); // "papka__test/<file>.txt"
@@ -1848,9 +1929,8 @@ void Dictionary::FoldersHandler()
             folder = temp->folder;
             innerAll_file = temp->innerAll_file;
             innerAll_dict = temp->innerAll_dict;
-            path = file.substr(13, file.size() - 17);
-            if(excluded.find(path) == excluded.end()) addToFile(*temp, 1);
-            else addToFile(*temp, 0);
+            if(folderInfo.MovieIsExcluded(file)) addToFile(*temp, 0);
+            else addToFile(*temp, 1);
             delete temp;
             folderInfo.AddFile(file.substr(file.rfind("/") + 1), folder);
             if(!out) {
@@ -1886,18 +1966,17 @@ void Dictionary::FoldersHandler()
                 goto thatsall;
             }
             folderInfo.DeleteFile(file);
-            string path = file.substr(13, file.size() - 17);
-            if(excluded.find(path) == excluded.end()) addToFile(*this, 1);
-            else addToFile(*this, 0);
+            if(folderInfo.MovieIsExcluded(file)) addToFile(*this, 0);
+            else addToFile(*this, 1);
             WriteInDic(innerAll_file, innerAll_dict);
             innerAll_dict.clear();
             innerAll_file = "";
             folder = "";
-            string newDest = "Dictionaries" + file.substr(file.rfind("/"));
+            string newDest = "Dictionaries/" + file.substr(file.rfind("/") + 1);
             rename(file.c_str(), newDest.c_str());
-            if(excluded.find(path) != excluded.end()) {
-                excluded.erase(path);
-                excluded.insert(newDest.substr(13, newDest.size() - 17));
+            if(folderInfo.MovieIsExcluded(file)) {
+                folderInfo.RemoveFromExcluded(file);
+                folderInfo.AddToExcluded(newDest);
             }
             file = newDest;
             folderInfo.AddFile(file.substr(file.rfind("/") + 1));
@@ -1906,11 +1985,10 @@ void Dictionary::FoldersHandler()
         else if(choice.substr(0, 4) == "show") {
             needInstructions = 0;
             string folderName = choice.substr(4);
-            GetRidOfSpaces(folderName);
+            getRidOfSpaces(folderName);
             if(folder != "") {
-                string path = file.substr(13, file.size() - 17);
-                if(excluded.find(path) == excluded.end()) addToFile(*this, 1);
-                else addToFile(*this, 0);
+                if(folderInfo.MovieIsExcluded(file)) addToFile(*this, 0);
+                else addToFile(*this, 1);
             }
             if(folderName == "") {
                 vector<string> existingFolders = folderInfo.GetAllFolders();
@@ -2021,7 +2099,7 @@ void Dictionary::FoldersHandler()
                 }
                 goto thatsall;
             }
-            if(FileIsExcluded()) addToFile(*this, 0);
+            if(folderInfo.MovieIsExcluded(file)) addToFile(*this, 0);
             else addToFile(*this, 1);
             map<string, vector<string>> newLocalAll;
             vector<string> filesInFolder = folderInfo.GetFilesFromFolder(folder);
@@ -2071,7 +2149,7 @@ void Dictionary::FoldersHandler()
         needInstructions = 1;
         command = "";
         getline(cin, choice);
-        GetRidOfSpaces(choice);
+        getRidOfSpaces(choice);
         for(int i = 0; i < choice.size(); ++i)
         choice[i] = tolower(choice[i]);
     }
@@ -2268,7 +2346,7 @@ void Dictionary::FileUpDown(char whereTo)
         if(index == filesInFolder.size() - 1) index = 0;
         else index++;
     }
-    if(excluded.find(file.substr(13, file.size() - 17)) != excluded.end()) addToFile(*this, 0);
+    if(folderInfo.MovieIsExcluded(file)) addToFile(*this, 0);
     else addToFile(*this, 1);
     string newFilePath = filesInFolder[index] + ".txt";
     demonstrationToPath(newFilePath);
@@ -2285,7 +2363,7 @@ void Dictionary::FileUpDown(char whereTo)
     while(last_word.size()) last_word.pop();
 }
 
-void Dictionary::ChangeDictionaryName(set<string>& excluded)
+void Dictionary::ChangeDictionaryName()
 {
     if(file.substr(file.size() - 7) == "all.txt") {
         Beep(80, 400);
@@ -2294,13 +2372,13 @@ void Dictionary::ChangeDictionaryName(set<string>& excluded)
     string newName;
     if(cin.peek() != '\n') {
         getline(cin, newName);
-        GetRidOfSpaces(newName);
+        getRidOfSpaces(newName);
         if(newName == "") {
             system("cls");
             cout << "\n\tНовое имя словаря: ";
             cin.sync();
             getline(cin, newName);
-            GetRidOfSpaces(newName);
+            getRidOfSpaces(newName);
         }
     }
     else {
@@ -2308,7 +2386,7 @@ void Dictionary::ChangeDictionaryName(set<string>& excluded)
         cout << "\n\tНовое имя словаря: ";
         cin.sync();
         getline(cin, newName);
-        GetRidOfSpaces(newName);
+        getRidOfSpaces(newName);
     }
     if(newName == "") return;
     vector<string> filesInCurrentFolder = folderInfo.GetFilesFromFolder(folder);
@@ -2321,9 +2399,9 @@ void Dictionary::ChangeDictionaryName(set<string>& excluded)
     demonstrationToPath(newName);
     newName = "Dictionaries/" + folder + newName + ".txt";
     if(newName != file) {
-        if(excluded.find(file.substr(13, file.size() - 17)) != excluded.end()) {
-            excluded.erase(file.substr(13, file.size() - 17));
-            excluded.insert(newName.substr(13, newName.size() - 17));
+        if(folderInfo.MovieIsExcluded(file)) {
+            folderInfo.RemoveFromExcluded(file);
+            folderInfo.AddToExcluded(newName);
         }
         rename(file.c_str(), newName.c_str());
         file = newName;
@@ -2353,30 +2431,5 @@ bool Dictionary::YesOrNo()
         choice = _getch();
         if(choice == 'y' || choice == 'Y' || choice == -83 || choice == -115) return 1;
         if(choice == 'n' || choice == 'N' || choice == -30 || choice == -110) return 0;
-    }
-}
-
-bool Dictionary::FileIsExcluded(string fileName, string folderName)
-{
-    // fileName is "Dictionaries/foldername_or_nothing/file.txt"
-    // folderName is "papka__foldername/"
-    if(fileName == "") fileName = file;
-    if(folderName == "...") folderName = folder;
-    fileName = folderName + fileName.substr(fileName.rfind("/") + 1);
-    fileName.erase(fileName.size() - 4);
-    if(excluded.find(fileName) != excluded.end()) return 1;
-    else return 0;
-}
-
-void Dictionary::GetRidOfSpaces(string& phrase, char sym)
-{
-    while(phrase[0] == sym) phrase.erase(0, 1);
-    while(phrase.back() == sym) phrase.pop_back();
-    int l = 1;
-    while(l < phrase.size()) {
-        if(phrase[l] == sym && phrase[l-1] == sym) {
-            phrase.erase(l--, 1);
-        }
-        l++;
     }
 }

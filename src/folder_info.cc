@@ -10,6 +10,9 @@ FolderInfo::FolderInfo()
         path2title[it->second] = it->first;
     }
 
+    ReadExcluded();
+    WriteExcluded();
+
     DIR *dir, *innerDir;
     dirent *entry;
     dir = opendir("Dictionaries");
@@ -27,13 +30,13 @@ FolderInfo::FolderInfo()
                 perror("Dictionaries");
                 exit(-1);
             }
-            TransformPathIntoMovieTitle(currentFolder);
+            currentFolder = TransformPathIntoMovieTitle(currentFolder);
             dateFilesOrder[currentFolder];
             while((entry = readdir(innerDir)) != nullptr) {
                 currentFile = entry->d_name;
                 if(currentFile == "." || currentFile == "..") continue;
                 assert(currentFile.substr(currentFile.size() - 4) == ".txt");
-                TransformPathIntoMovieTitle(currentFile);
+                currentFile = TransformPathIntoMovieTitle(currentFile);
                 if(IsDateWithYear(currentFile, correspondingValue)) {
                     bool moreThanOne = dateFilesOrder[currentFolder][0].find(correspondingValue) != dateFilesOrder[currentFolder][0].end();
                     dateFilesOrder[currentFolder][0].insert(make_pair(correspondingValue, currentFile));
@@ -78,12 +81,67 @@ void FolderInfo::ArrangeTitlesInOrder(const string& folderName, vector<string>& 
     }
 }
 
+void FolderInfo::ReadExcluded()
+{
+    ifstream fin("Dictionaries/__excluded__.txt");
+    assert(fin.is_open());
+    string line, path;
+    while(getline(fin, line)) {
+        getRidOfSpaces(line);
+        if(line.find(" -> ") != string::npos) line.replace(line.find(" -> "), 4, "/");
+        else if(line.find(" ->") != string::npos) line.replace(line.find(" ->"), 3, "/");
+        else if(line.find("-> ") != string::npos) line.replace(line.find("-> "), 3, "/");
+        else if(line.find(" / ") != string::npos) line.replace(line.find(" / "), 3, "/");
+        else if(line.find(" /") != string::npos) line.replace(line.find(" /"), 2, "/");
+        else if(line.find("/ ") != string::npos) line.replace(line.find("/ "), 2, "/");
+        path = TransformMovieTitleIntoPath(line);
+        excluded.insert(path);
+    }
+    fin.close();
+}
+
+void FolderInfo::WriteExcluded()
+{
+    ofstream fout("Dictionaries/__excluded__.txt");
+    string movie;
+    for(auto path : excluded) {
+        movie = TransformPathIntoMovieTitle(path);
+        if(movie.find("/") != string::npos) movie.replace(movie.find("/"), 1, " -> ");
+        fout << movie << '\n';
+    }
+    fout.close();
+}
+
+bool FolderInfo::MovieIsExcluded(string pathOrTitle)
+{
+    string path = TransformMovieTitleIntoPath(pathOrTitle);
+    return excluded.find(path) != excluded.end();
+}
+
+void FolderInfo::AddToExcluded(string pathOrTitle)
+{
+    string path = TransformMovieTitleIntoPath(pathOrTitle);
+    if(excluded.find(path) == excluded.end()) {
+        excluded.insert(path);
+        WriteExcluded();
+    }
+}
+
+void FolderInfo::RemoveFromExcluded(string pathOrTitle)
+{
+    string path = TransformMovieTitleIntoPath(pathOrTitle);
+    if(excluded.find(path) != excluded.end()) {
+        excluded.erase(path);
+        WriteExcluded();
+    }
+}
+
 void FolderInfo::AddFile(string file, string folder)
 {
     assert(folder.substr(0, 7) == "papka__" || folder == "");
     int correspondingValue;
-    TransformPathIntoMovieTitle(file);
-    TransformPathIntoMovieTitle(folder, 1);
+    file = TransformPathIntoMovieTitle(file);
+    folder = TransformPathIntoMovieTitle(folder, 1);
 
     if(folder == "") {
         if(elements.find(file) == elements.end()) elements[file];
@@ -156,10 +214,10 @@ void FolderInfo::DeleteFile(string file)
     if(file.find("/") != string::npos) {
         folder = file.substr(0, file.find("/"));
         file = file.substr(file.find("/") + 1);
-        TransformPathIntoMovieTitle(folder, 1);
-        TransformPathIntoMovieTitle(file);
+        folder = TransformPathIntoMovieTitle(folder, 1);
+        file = TransformPathIntoMovieTitle(file);
     }
-    else folderInfo.TransformPathIntoMovieTitle(file);
+    else file = TransformPathIntoMovieTitle(file);
     if(folder == "") {
         auto it = elements.find(file);
         if(it != elements.end()) elements.erase(it);
@@ -195,7 +253,7 @@ void FolderInfo::DeleteFile(string file)
 
 void FolderInfo::AddFolder(string folder)
 {
-    TransformPathIntoMovieTitle(folder, 1);
+    folder = TransformPathIntoMovieTitle(folder, 1);
     if(elements.find(folder) == elements.end() ||
        find(elements[folder].begin(), elements[folder].end(), "all") == elements[folder].end())
     {
@@ -206,7 +264,7 @@ void FolderInfo::AddFolder(string folder)
 
 void FolderInfo::DeleteFolder(string folder)
 {
-    TransformPathIntoMovieTitle(folder, 1);
+    folder = TransformPathIntoMovieTitle(folder, 1);
     auto it = elements.find(folder);
     if(it != elements.end()) elements.erase(it);
 }
@@ -256,28 +314,35 @@ string FolderInfo::TransformMovieTitleIntoPath(string movieTitle, bool includeMa
         if(title2path.find(movieTitle[i]) != title2path.end())
             movieTitle[i] = title2path[movieTitle[i]];
     }
-    if(movieTitle.find("/") != string::npos && movieTitle.substr(0, 7) != "papka__") movieTitle = "papka__" + movieTitle;
+    if(movieTitle.substr(0, 13) != "Dictionaries/" && movieTitle.find("/") != string::npos && movieTitle.substr(0, 7) != "papka__")
+        movieTitle = "papka__" + movieTitle;
     if(includeMainFolder && movieTitle.substr(0, 13) != "Dictionaries/") movieTitle = "Dictionaries/" + movieTitle;
     if(movieTitle.size() < 4 || movieTitle.substr(movieTitle.size() - 4) != ".txt") movieTitle += ".txt";
     return movieTitle;
 }
 
-string FolderInfo::TransformPathIntoMovieTitle(std::string& path, bool isSurelyAFolder)
+string FolderInfo::TransformPathIntoMovieTitle(string path, bool isSurelyAFolder)
 {
     if(path == "") return path;
     if(path.substr(0, 13) == "Dictionaries/") path.erase(0, 13);
     if(path.back() == '/') path.pop_back();
-    assert(path.find("/") == string::npos);
-    if(path.substr(0, 7) == "papka__") {
-        path.erase(0, 7);
-        path += " ";
+    if(path.find("/") == string::npos) {
+        if(path.substr(0, 7) == "papka__") {
+            path.erase(0, 7);
+            path += " ";
+        }
+        if(path.size() >= 4 && path.substr(path.size() - 4) == ".txt") path.erase(path.size() - 4);
+        if(isSurelyAFolder && path.back() != ' ') path += " ";
     }
-    if(path.size() >= 4 && path.substr(path.size() - 4) == ".txt") path.erase(path.size() - 4);
+    else {
+        assert(path.substr(0, 7) == "papka__");
+        path.erase(0, 7);
+        if(path.size() >= 4 && path.substr(path.size() - 4) == ".txt") path.erase(path.size() - 4);
+    }
     for(int i = 0; i < path.size(); ++i) {
         if(path2title.find(path[i]) != path2title.end())
             path[i] = path2title[path[i]];
     }
-    if(isSurelyAFolder && path.back() != ' ') path += " ";
     return path;
 }
 
@@ -297,7 +362,7 @@ void FolderInfo::SortSameValues(multimap<int, string, greater<int>>& mm, int val
 
 bool FolderInfo::FolderExists(string folder)
 {
-    TransformPathIntoMovieTitle(folder, 1);
+    folder = TransformPathIntoMovieTitle(folder, 1);
     return elements.find(folder) != elements.end();
 }
 
@@ -343,7 +408,7 @@ vector<string> FolderInfo::GetFilesFromFolder(string folder)
         return files;
     }
     else {
-        TransformPathIntoMovieTitle(folder, 1);
+        folder = TransformPathIntoMovieTitle(folder, 1);
         assert(elements.find(folder) != elements.end());
         return elements[folder];
     }

@@ -13,7 +13,6 @@
 #include "folder_info.cc"
 using namespace std;
 
-set<string> excluded;
 FolderInfo folderInfo;
 
 void dirCommand(map<string, vector<string>>& films, string& film_name);
@@ -26,16 +25,12 @@ int main()
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_CURSOR_INFO structCursorInfo;
     map<string, vector<string>> films;
-    string path;
-    ifstream fin("Dictionaries/__excluded__.txt");
-    while(fin >> path) excluded.insert(path);
-    fin.close();
 
     another_movie:
     GetConsoleCursorInfo(hConsole, &structCursorInfo);
     structCursorInfo.bVisible = FALSE;
     SetConsoleCursorInfo(hConsole, &structCursorInfo);
-    vector<string> vars, innerFolderFilms;
+    vector<string> vars;
     films = folderInfo.GetAllFilms();
 
     string s, film_name, just_a_name = "";
@@ -49,13 +44,7 @@ int main()
     cin.sync();
     while(1) {
         c[0] = _getch();
-        if(c[0] == 27) {
-            ofstream fout("Dictionaries/__excluded__.txt");
-            for(auto it = excluded.begin(); it != excluded.end(); ++it)
-                fout << *it << "\n";
-            fout.close();
-            return 0;
-        }
+        if(c[0] == 27) return 0;
         if(c[0] == ' ' && !film_name.size() || c[0] == ' ' && film_name.back() == ' ') continue;
         if(c[0] == 13 || c[0] == 9) { // enter || tab
             if(film_name == "" && c[0] == 9) {
@@ -94,9 +83,11 @@ int main()
             else {
                 if(film_name.size() && c[0] == 13) break;
                 else if(c[0] == 9) {
-                    film_name = vars[0];
+                    if(vars.size()) {
+                        film_name = vars[0];
+                        if(films[vars[0]].size()) film_name += "/all";
+                    }
                     if(film_name.back() == ' ') film_name.erase(film_name.size() - 1);
-                    if(films[vars[0]].size()) film_name += "/all";
                     break;
                 }
             }
@@ -117,12 +108,25 @@ int main()
                     it->second.pop_back();
             }
         }
-        else if(c[0] == 'k') goto arrowUp;       // up (для ввода букв k, j нужна русская раскладка)
-        else if(c[0] == 'j') goto arrowDown;     // down
-        else if(c[0] == 11)  goto ctrlArrowUp;   // ctrl + k
-        else if(c[0] == 10)  goto ctrlArrowDown; // ctrl + j
+        else if(c[0] == 'k') {  // up (для ввода букв k, j нужна русская раскладка)
+            if(!vars.size()) continue;
+            goto arrowUp;
+        }
+        else if(c[0] == 'j') {  // down
+            if(!vars.size()) continue;
+            goto arrowDown;
+        }
+        else if(c[0] == 11) {  // ctrl + k
+            if(!vars.size()) continue;
+            goto ctrlArrowUp;
+        }
+        else if(c[0] == 10) {  // ctrl + j
+            if(!vars.size()) continue;
+            goto ctrlArrowDown;
+        }
         else if(c[0] == -32 && kbhit()) { // стрелки
             changer = _getch();
+            if(!vars.size()) continue;
             sameUpOrDown:
             if(changer == 72) { // up
                 arrowUp:
@@ -227,13 +231,7 @@ int main()
         system("cls");
         cout << "\n\tВведите название фильма: " << film_name;
         if(!film_name.size()) continue;
-        if(film_name == "exit" || film_name == "EXIT") {
-            ofstream fout("Dictionaries/__excluded__.txt");
-            for(auto it = excluded.begin(); it != excluded.end(); ++it)
-                fout << *it << "\n";
-            fout.close();
-            return 0;
-        }
+        if(film_name == "exit" || film_name == "EXIT") return 0;
         if(film_name == "renew" || film_name == "RENEW") {
             setPosition(33, 1);
             setColor(LIGHT_RED);
@@ -352,12 +350,12 @@ int main()
     }
     Dictionary d(film_name);
     char choice;
-    string folderWriting, fileWriting;
+    string folderWriting, fileWriting, path;
     do {
         system("cls");
-        path = d.GetFileName().substr(13, d.GetFileName().size() - 17);
-        if(excluded.find(path) == excluded.end()) setColor(BEIGE);
-        else setColor(SEA_WAVE);
+        path = d.GetFileName();
+        if(folderInfo.MovieIsExcluded(path)) setColor(SEA_WAVE);
+        else setColor(BEIGE);
         fileWriting = d.GetFileName();
         fileWriting = fileWriting.substr(fileWriting.rfind("/") + 1);
         fileWriting.erase(fileWriting.size() - 4);
@@ -389,9 +387,9 @@ int main()
         if(d.GetFileName() != "Dictionaries/all.txt")
         {cout << "v"; setColor(WHITE); cout << " - find among all\n\t";                            setColor(GREEN);}
         cout << "t"; setColor(WHITE); cout << " - deTermine which dictionary the word is in\n\t";  setColor(GREEN);
-        cout << "x"; setColor(WHITE); cout << " - pass an eXam\n\t";                             setColor(GREEN);
+        cout << "x"; setColor(WHITE); cout << " - pass an eXam\n\t";                               setColor(GREEN);
         if(d.GetFileName() == "Dictionaries/all.txt")
-        {cout << "i"; setColor(WHITE); cout << " - Interesting Info\n";                          setColor(GREEN);}
+        {cout << "i"; setColor(WHITE); cout << " - Interesting Info\n";                            setColor(GREEN);}
         cout << "\n\t";
 
         if(d.GetFileName() != "Dictionaries/" + d.GetFolder() + "all.txt")
@@ -444,14 +442,14 @@ int main()
                       break;
             case -87:
             case -119:
-            case 'q': if(excluded.find(path) == excluded.end() && path != d.GetFolder() + "all") excluded.insert(path);
-                      addToFile(d, 0);
-                      goto another_movie;
+            case 'q': if(path.substr(path.rfind("/") + 1) == "all.txt") continue;
+                      if(folderInfo.MovieIsExcluded(path)) folderInfo.RemoveFromExcluded(path);
+                      else folderInfo.AddToExcluded(path);
                       break;
             case -31:
             case -111:
-            case 'c': if(excluded.find(path) != excluded.end()) excluded.erase(path);
-                      addToFile(d, 1);
+            case 'c': if(folderInfo.MovieIsExcluded(path)) addToFile(d, 0);
+                      else addToFile(d, 1);
                       goto another_movie;
                       break;
             case -76:
@@ -468,7 +466,7 @@ int main()
             case '>': d.FileUpDown('>');
                      break;
             case -65:
-            case 'g': d.ChangeDictionaryName(excluded);
+            case 'g': d.ChangeDictionaryName();
                       break;
             case -92:
             case -124:
@@ -482,17 +480,17 @@ int main()
             case -24:
             case -104:
             case 'i': if(d.GetFileName() == "Dictionaries/all.txt") d.InterestingInfo();
+                      break;
+            case -89:
+            case -121:
+            case 'p': d.CheckDictionariesExclusion();
+                      break;
             default:  break;
         }
         if(d.GetFileName() == "") goto another_movie;
     }while(choice != 'e' && choice != -29 && choice != -109);
-    if(excluded.find(d.GetFileName().substr(13, d.GetFileName().size() - 17)) == excluded.end())
-        addToFile(d, 1);
-    else addToFile(d, 0);
-    ofstream fout("Dictionaries/__excluded__.txt");
-    for(auto it = excluded.begin(); it != excluded.end(); ++it)
-        fout << *it << "\n";
-    fout.close();
+    if(folderInfo.MovieIsExcluded(d.GetFileName())) addToFile(d, 0);
+    else addToFile(d, 1);
     system("cls");
 
     return 0;
@@ -714,7 +712,7 @@ void renew(map<string, vector<string>>& films)
             for(int i = 0; i < it->second.size(); ++i) {
                 path = folder + it->second[i];
                 demonstrationToPath(path);
-                if(excluded.find(path) == excluded.end()) {
+                if(!folderInfo.MovieIsExcluded(path)) {
                     setPosition(33, 1);
                     if(R) cout << "RENEW";
                     else cout << "renew";
@@ -728,7 +726,7 @@ void renew(map<string, vector<string>>& films)
         else {
             path = it->first;
             demonstrationToPath(path);
-            if(excluded.find(path) == excluded.end()) {
+            if(!folderInfo.MovieIsExcluded(path)) {
                 setPosition(33, 1);
                 if(R) cout << "RENEW";
                 else cout << "renew";
