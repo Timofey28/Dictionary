@@ -65,50 +65,6 @@ void Dictionary::InterestingInfo()
         barHeight[it->first] = currentHeight;
     }
 
-//    system("cls");
-//    setPosition(7, nConsoleHeight - 2);
-//    for(char c = 'a'; c < 'z'; c++) cout << c << "  ";
-//    cout << 'z';
-//    int x = 1,
-//        y = nConsoleHeight - 2;
-//    for(int i = 1; i < highestPossibleColumn; ++i) {
-//        setPosition(x, y - i);
-//        cout << setw(4);
-//        if(i % 3 == 0) {
-//            cout << round((double) i * greatestFreq / highestPossibleColumn);
-//            _setmode(_fileno(stdout), _O_U16TEXT);
-//            wcout << " " << wstring(78, (wchar_t) 0x02D9);
-//            _setmode(_fileno(stdout), _O_TEXT);
-//        }
-//        else cout << "|";
-//    }
-//    setPosition(x, y - highestPossibleColumn);
-//    cout << setw(4) << greatestFreq;
-//    _setmode(_fileno(stdout), _O_U16TEXT);
-//    wcout << " " << wstring(78, (wchar_t) 0x02D9);
-//    _setmode(_fileno(stdout), _O_TEXT);
-//    setPosition(x, y - highestPossibleColumn - 1);
-//    cout << setw(4) << (char) 24;  // стрелка вверх
-//
-//    setColor(255);
-//    for(auto it = barHeight.begin(); it != barHeight.end(); ++it) {
-//        x = 7 + 3 * (it->first - 'a');
-//        y = nConsoleHeight - 3;
-//        for(int i = 0; i < it->second; ++i) {
-//            setPosition(x, y - i);
-//            cout << "ww";
-//        }
-//
-//        if(!it->second && frequency[it->first]) {
-//            setPosition(x, y);
-//            setColor(WHITE);
-//            cout << "__";
-//            setColor(255);
-//        }
-//    }
-//    setColor(WHITE);
-//    _getch();
-
     system("cls");
     setPosition(8, nConsoleHeight - 2);
     for(char c = 'a'; c < 'z'; c++) cout << c << "  ";
@@ -246,10 +202,11 @@ pair<char, char> Dictionary::EnterWord(string& meaning, bool isAdding)
     meaning = "";
     char input[100];
     bool ignoreSpecialCharacters = 0;
+    string word;
     cin >> input;
     while(1) {
         OemToCharA(input, input);
-        string word(input);
+        word = input;
         if(ignoreSpecialCharacters) {
             if(word.back() == '*') {
                 word.pop_back();
@@ -299,8 +256,12 @@ pair<char, char> Dictionary::EnterWord(string& meaning, bool isAdding)
                 return {'f', input[1]};
             if((input[0] == 'r' || input[0] == 'к' || input[0] == 'R' || input[0] == 'К') && isdigit(input[1]))
                 return {'r', input[1]};
-            if(strlen(input) == 1 && input[0] == 'g' || input[0] == -17)
+            if(strlen(input) == 1 && (input[0] == 'g' || input[0] == 'п'))
                 return {'g', '\0'};
+            if(strlen(input) == 1 && (input[0] == 'q' || input[0] == 'й'))
+                return {'q', '\0'};
+            if(strlen(input) == 1 && (input[0] == 'w' || input[0] == 'ц'))
+                return {'w', '\0'};
         }
         off:
         string cppInput(input);
@@ -899,6 +860,9 @@ void Dictionary::AddSomeMeanings(string word)
         }
         vector<string> oldMeaning = dict[word];
         string oldWord = word;
+        vector<vector<string>> meaningHistory = {dict[word]};
+        vector<string> wordHistory = {word};
+        int currentHistoryIndex = 0;
 
         while(1) {
             system("cls");
@@ -928,8 +892,18 @@ void Dictionary::AddSomeMeanings(string word)
             }
             if(p.first == 'd') {  // удаление значения
                 if(p.second == '\0') dict[word].pop_back();
-                else dict[word].erase(dict[word].begin() + p.second - 49);
+                else dict[word].erase(dict[word].begin() + max(0, p.second - 49));
                 if(!dict[word].size()) dict[word].push_back(" ");
+
+                if(dict[word] != meaningHistory[currentHistoryIndex]) {
+                    if(currentHistoryIndex != wordHistory.size() - 1) {
+                        wordHistory.erase(wordHistory.begin() + currentHistoryIndex + 1, wordHistory.end());
+                        meaningHistory.erase(meaningHistory.begin() + currentHistoryIndex + 1, meaningHistory.end());
+                    }
+                    wordHistory.push_back(word);
+                    meaningHistory.push_back(dict[word]);
+                    currentHistoryIndex++;
+                }
             }
             else if(p.first == 'z') {  // замена значения
                 int index = (p.second == '\0') ? dict[word].size() - 1 : p.second - 49;
@@ -958,20 +932,48 @@ void Dictionary::AddSomeMeanings(string word)
                     if(dict[word][index][0] != ' ') dict[word][index].insert(0, 1, ' ');
                 }
                 else dict[word][index] = meaning;
+
+                if(dict[word] != meaningHistory.back()) {
+                    if(currentHistoryIndex != wordHistory.size() - 1) {
+                        wordHistory.erase(wordHistory.begin() + currentHistoryIndex + 1, wordHistory.end());
+                        meaningHistory.erase(meaningHistory.begin() + currentHistoryIndex + 1, meaningHistory.end());
+                    }
+                    wordHistory.push_back(word);
+                    meaningHistory.push_back(dict[word]);
+                    currentHistoryIndex++;
+                }
             }
             else if(p.first == 'j') {  // добавление в уже имеющееся значение после запятой
+                if(meaning == "") continue;
                 if(p.second == '\0') {
                     if(dict[word].size() == 1 && dict[word][0] == " ") dict[word][0] = meaning;
                     else dict[word].back() += "," + meaning;
                 }
                 else dict[word][max(0, p.second - 49)] += "," + meaning;
+
+                if(currentHistoryIndex != wordHistory.size() - 1) {
+                    wordHistory.erase(wordHistory.begin() + currentHistoryIndex + 1, wordHistory.end());
+                    meaningHistory.erase(meaningHistory.begin() + currentHistoryIndex + 1, meaningHistory.end());
+                }
+                wordHistory.push_back(word);
+                meaningHistory.push_back(dict[word]);
+                currentHistoryIndex++;
             }
             else if(p.first == 'k') {  // добавление в уже имеющееся значение после пробела
+                if(meaning == "") continue;
                 if(p.second == '\0') {
                     if(dict[word].size() == 1 && dict[word][0] == " ") dict[word][0] = meaning;
                     else dict[word].back() += meaning;
                 }
                 else dict[word][max(0, p.second - 49)] += meaning;
+
+                if(currentHistoryIndex != wordHistory.size() - 1) {
+                    wordHistory.erase(wordHistory.begin() + currentHistoryIndex + 1, wordHistory.end());
+                    meaningHistory.erase(meaningHistory.begin() + currentHistoryIndex + 1, meaningHistory.end());
+                }
+                wordHistory.push_back(word);
+                meaningHistory.push_back(dict[word]);
+                currentHistoryIndex++;
             }
             else if(p.first == 'u') {  // удаление последнего слова/выражения после последней запятой у какого-то значения
                 int k;
@@ -982,6 +984,14 @@ void Dictionary::AddSomeMeanings(string word)
                 if(s.find(",") != string::npos) {
                     s.erase(s.rfind(","));
                     dict[word][k] = s;
+
+                    if(currentHistoryIndex != wordHistory.size() - 1) {
+                        wordHistory.erase(wordHistory.begin() + currentHistoryIndex + 1, wordHistory.end());
+                        meaningHistory.erase(meaningHistory.begin() + currentHistoryIndex + 1, meaningHistory.end());
+                    }
+                    wordHistory.push_back(word);
+                    meaningHistory.push_back(dict[word]);
+                    currentHistoryIndex++;
                 }
             }
             else if(p.first == 'i') {  // удаление последнего слова после последнего пробела у какого-то значения
@@ -991,10 +1001,20 @@ void Dictionary::AddSomeMeanings(string word)
                 k = min(k, (int) dict[word].size() - 1);
                 string s = dict[word][k];
                 int spaceIndex = s.rfind(" ");
-                if(spaceIndex != string::npos && spaceIndex != 0) s.erase(spaceIndex);
-                assert(s != "" && s != " ");
-                if(s.back() == ',') s.pop_back();
-                dict[word][k] = s;
+                if(spaceIndex != string::npos && spaceIndex != 0) {
+                    s.erase(spaceIndex);
+                    assert(s != "" && s != " ");
+                    if(s.back() == ',') s.pop_back();
+                    dict[word][k] = s;
+
+                    if(currentHistoryIndex != wordHistory.size() - 1) {
+                        wordHistory.erase(wordHistory.begin() + currentHistoryIndex + 1, wordHistory.end());
+                        meaningHistory.erase(meaningHistory.begin() + currentHistoryIndex + 1, meaningHistory.end());
+                    }
+                    wordHistory.push_back(word);
+                    meaningHistory.push_back(dict[word]);
+                    currentHistoryIndex++;
+                }
             }
             else if((p.first == 'f') && isdigit(p.second)) {  // добавление нового значения
                 int k = max(min((int) dict[word].size(), p.second - 49), 0);
@@ -1009,6 +1029,14 @@ void Dictionary::AddSomeMeanings(string word)
                     new_meaning.insert(new_meaning.end(), dict[word].begin() + k, dict[word].end());
                     dict[word] = new_meaning;
                 }
+
+                if(currentHistoryIndex != wordHistory.size() - 1) {
+                    wordHistory.erase(wordHistory.begin() + currentHistoryIndex + 1, wordHistory.end());
+                    meaningHistory.erase(meaningHistory.begin() + currentHistoryIndex + 1, meaningHistory.end());
+                }
+                wordHistory.push_back(word);
+                meaningHistory.push_back(dict[word]);
+                currentHistoryIndex++;
             }
             else if(p.first == 'g') {  // замена слова
                 meaning.erase(0, 1);
@@ -1024,13 +1052,51 @@ void Dictionary::AddSomeMeanings(string word)
                         word = meaning;
                         if(last_word.size()) last_word.pop();
                         last_word.push(word);
+
+                        if(currentHistoryIndex != wordHistory.size() - 1) {
+                            wordHistory.erase(wordHistory.begin() + currentHistoryIndex + 1, wordHistory.end());
+                            meaningHistory.erase(meaningHistory.begin() + currentHistoryIndex + 1, meaningHistory.end());
+                        }
+                        wordHistory.push_back(word);
+                        meaningHistory.push_back(dict[word]);
+                        currentHistoryIndex++;
                     }
+                }
+                else cout << '\a';
+            }
+            else if(p.first == 'q') {
+                if(currentHistoryIndex) {
+                    currentHistoryIndex--;
+                    if(word != wordHistory[currentHistoryIndex]) {
+                        dict.erase(dict.find(word));
+                        word = wordHistory[currentHistoryIndex];
+                    }
+                    dict[word] = meaningHistory[currentHistoryIndex];
+                }
+                else cout << '\a';
+            }
+            else if(p.first == 'w') {
+                if(currentHistoryIndex < wordHistory.size() - 1) {
+                    currentHistoryIndex++;
+                    if(word != wordHistory[currentHistoryIndex]) {
+                        dict.erase(dict.find(word));
+                        word = wordHistory[currentHistoryIndex];
+                    }
+                    dict[word] = meaningHistory[currentHistoryIndex];
                 }
                 else cout << '\a';
             }
             else if(p.first != 'b') {
                 if(dict[word].size() == 1 && dict[word][0] == " ") dict[word][0] = meaning;
                 else dict[word].push_back(meaning);
+
+                if(currentHistoryIndex != wordHistory.size() - 1) {
+                    wordHistory.erase(wordHistory.begin() + currentHistoryIndex + 1, wordHistory.end());
+                    meaningHistory.erase(meaningHistory.begin() + currentHistoryIndex + 1, meaningHistory.end());
+                }
+                wordHistory.push_back(word);
+                meaningHistory.push_back(dict[word]);
+                currentHistoryIndex++;
             }
         }
 
