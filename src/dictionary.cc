@@ -353,10 +353,10 @@ void Dictionary::Print()
         if(choice == 'k' || choice == -85)      goto arrowUp_print;
         else if(choice == 'j' || choice == -82) goto arrowDown_print;
         else if(choice == 11)                   goto screenUp_print;  // ctrl+k
-        else if(choice == 10)                   goto screenDown_print; // ctlr+j
+        else if(choice == 10)                   goto screenDown_print;  // ctlr+j
         else if(choice == -32) {
             choice = _getch();
-            if(choice == 72) { // стрелка вверх
+            if(choice == 72) {  // стрелка вверх
                 arrowUp_print:
                 if(!up) {
                     up = 1;
@@ -367,7 +367,7 @@ void Dictionary::Print()
                 if(!SetConsoleCursorPosition(hWndConsole, coord))
                     cout << "\nError: " << GetLastError() << "\n";
             }
-            else if(choice == 80) { // стрелка вниз
+            else if(choice == 80) {  // стрелка вниз
                 arrowDown_print:
                 if(up) {
                     up = 0;
@@ -378,7 +378,7 @@ void Dictionary::Print()
                 if(!SetConsoleCursorPosition(hWndConsole, coord))
                     cout << "\nError: " << GetLastError() << "\n";
             }
-            else if(choice == -115) { // screen up
+            else if(choice == -115) {  // screen up
                 screenUp_print:
                 if(!up) {
                     up = 1;
@@ -389,7 +389,7 @@ void Dictionary::Print()
                 if(!SetConsoleCursorPosition(hWndConsole, coord))
                     cout << "\nError: " << GetLastError() << "\n";
             }
-            else if(choice == -111) { // screen down
+            else if(choice == -111) {  // screen down
                 screenDown_print:
                 if(up) {
                     up = 0;
@@ -520,11 +520,11 @@ void Dictionary::PrintOnlyEnglish()
         while((choice = _getch()) != 13) {
             if(choice == 'k' || choice == -85)      goto arrowUp_printOnlyEnglish;
             else if(choice == 'j' || choice == -82) goto arrowDown_printOnlyEnglish;
-            else if(choice == 11)                   goto screenUp_printOnlyEnglish; // ctrl+k
-            else if(choice == 10)                   goto screenDown_printOnlyEnglish; // ctrl+j
+            else if(choice == 11)                   goto screenUp_printOnlyEnglish;  // ctrl+k
+            else if(choice == 10)                   goto screenDown_printOnlyEnglish;  // ctrl+j
             else if(choice == -32 && _kbhit()) {
                 choice = _getch();
-                if(choice == 72) { // стрелка вверх
+                if(choice == 72) {  // стрелка вверх
                     arrowUp_printOnlyEnglish:
                     if(!up) {
                         up = 1;
@@ -534,7 +534,7 @@ void Dictionary::PrintOnlyEnglish()
                     if(!SetConsoleCursorPosition(hConsole, coord))
                         cout << "\nError: " << GetLastError() << "\n";
                 }
-                else if(choice == 80) { // стрелка вниз
+                else if(choice == 80) {  // стрелка вниз
                     arrowDown_printOnlyEnglish:
                     if(up) {
                         up = 0;
@@ -544,7 +544,7 @@ void Dictionary::PrintOnlyEnglish()
                     if(!SetConsoleCursorPosition(hConsole, coord))
                         cout << "\nError: " << GetLastError() << "\n";
                 }
-                else if(choice == -115) { // screen up
+                else if(choice == -115) {  // screen up
                     screenUp_printOnlyEnglish:
                     if(!up) {
                         up = 1;
@@ -554,7 +554,7 @@ void Dictionary::PrintOnlyEnglish()
                     if(!SetConsoleCursorPosition(hConsole, coord))
                         cout << "\nError: " << GetLastError() << "\n";
                 }
-                else if(choice == 10 || choice == -111) { // screen down
+                else if(choice == 10 || choice == -111) {  // screen down
                     screenDown_printOnlyEnglish:
                     if(up) {
                         up = 0;
@@ -580,8 +580,8 @@ void Dictionary::PrintOnlyEnglish()
     cin.get();
 }
 
-string Dictionary::ModifyString(string s, int width, int indent) // indent - расстояние от начала слова до
-{                                                                // начала значения
+string Dictionary::ModifyString(string s, int width, int indent)  // indent - расстояние от начала слова до
+{                                                                 // начала значения
     width -= indent;
     if(s.size() <= width) return s;
     int longest_word_size = 0;
@@ -727,18 +727,18 @@ void Dictionary::Add()
             c[0] = _getch();
             OemToCharA(c, c);
             c[0] = tolower(c[0]);
-            if(c[0] == 110 || c[0] == -14) return; // n || т
-            if(c[0] == 116 || c[0] == -27) { // t || е
+            if(c[0] == 110 || c[0] == -14) return;  // n || т
+            if(c[0] == 116 || c[0] == -27) {  // t || е
                 int res = Determine(word);
                 if(!res) return;
                 else if(res == 1) goto again1;
             }
-            else if(c[0] != 121 && c[0] != -19) goto only_yes_or_no3; // y && н
+            else if(c[0] != 121 && c[0] != -19) goto only_yes_or_no3;  // y && н
             else goto addHereAlso;
         }
         cin >> c;
         OemToCharA(c, c);
-        if((c[0] == 170 || c[0] == 114 || c[0] == 82 || c[0] == 138) && c[1] == '\0') // к, r, R, К соотв.
+        if((c[0] == 170 || c[0] == 114 || c[0] == 82 || c[0] == 138) && c[1] == '\0')  // к, r, R, К соотв.
             startingMeaning = all_dict[word];
         else {
             string mnRightAfterWord = c;
@@ -770,18 +770,18 @@ void Dictionary::Add()
         c[0] = _getch();
         OemToCharA(c, c);
         c[0] = tolower(c[0]);
-        if(c[0] == 110 || c[0] == -14) return; // (n || т)
-        else if((c[0] == 115 || c[0] == -5) && startingMeaning != all_dict[word]) { // (s || ы)
+        if(c[0] == 110 || c[0] == -14) return;  // (n || т)
+        else if((c[0] == 115 || c[0] == -5) && startingMeaning != all_dict[word]) {  // (s || ы)
             dict[word] = all_dict[word];
             last_word.push(word);
             return;
         }
-        else if(c[0] == 116 || c[0] == -27) { // (t || е)
+        else if(c[0] == 116 || c[0] == -27) {  // (t || е)
             int res = Determine(word);
             if(!res) return;
             else if(res == 1) goto again2;
         }
-        else if(c[0] != 121 && c[0] != -19) goto only_yes_or_no2; // (!y && !н)
+        else if(c[0] != 121 && c[0] != -19) goto only_yes_or_no2;  // (!y && !н)
 
         addHereAlso:
         vector<string> oldMeaning = dict[word];
@@ -870,7 +870,7 @@ void Dictionary::AddSomeMeanings(string word)
     for(int i = 0; i < word.size(); ++i) {
         if(word[i] == ' ') word[i] = '_';
     }
-    if(!calledFromMenu && dict.find(word) == dict.end()) { // если ты сюда пришел из determine() -> Wanna change? - yes -> и слова нет в текущем словаре
+    if(!calledFromMenu && dict.find(word) == dict.end()) {  // если ты сюда пришел из determine() -> Wanna change? - yes -> и слова нет в текущем словаре
         wordIsLocal = 0;
         dict[word] = all_dict[word];
     }
@@ -890,19 +890,20 @@ void Dictionary::AddSomeMeanings(string word)
         bool cursorIsVisible = 1;
         CONSOLE_CURSOR_INFO structCursorInfo;
         GetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &structCursorInfo);
-        if(structCursorInfo.bVisible != TRUE) {
+        if(structCursorInfo.bVisible == FALSE) {
             cursorIsVisible = 0;
             structCursorInfo.bVisible = TRUE;
             SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &structCursorInfo);
         }
         vector<string> oldMeaning = dict[word];
         string oldWord = word;
+
         while(1) {
             system("cls");
             PrintAWord(word);
             cout << "\n\n\tWrite a meaning: ";
             pair<char, char> p = EnterWord(meaning);
-            if(p.first == 'r') { // выход/добавление нового значения и затем сразу выход
+            if(p.first == 'r') {  // выход/добавление нового значения и затем сразу выход
                 if(isdigit(p.second)) {
                     int k = min((int) dict[word].size(), p.second - 49);
                     if(k == dict[word].size()) {
@@ -923,12 +924,12 @@ void Dictionary::AddSomeMeanings(string word)
                 }
                 break;
             }
-            if(p.first == 'd') { // удаление значения
+            if(p.first == 'd') {  // удаление значения
                 if(p.second == '\0') dict[word].pop_back();
                 else dict[word].erase(dict[word].begin() + p.second - 49);
                 if(!dict[word].size()) dict[word].push_back(" ");
             }
-            else if(p.first == 'z') { // замена значения
+            else if(p.first == 'z') {  // замена значения
                 int index = (p.second == '\0') ? dict[word].size() - 1 : p.second - 49;
                 if(count(meaning.begin(), meaning.end(), 'Э') >= 4) {
                     for(int i = 0; i < meaning.size(); ++i)
@@ -956,21 +957,21 @@ void Dictionary::AddSomeMeanings(string word)
                 }
                 else dict[word][index] = meaning;
             }
-            else if(p.first == 'j') { // добавление в уже имеющееся значение после запятой
+            else if(p.first == 'j') {  // добавление в уже имеющееся значение после запятой
                 if(p.second == '\0') {
                     if(dict[word].size() == 1 && dict[word][0] == " ") dict[word][0] = meaning;
                     else dict[word].back() += "," + meaning;
                 }
                 else dict[word][max(0, p.second - 49)] += "," + meaning;
             }
-            else if(p.first == 'k') { // добавление в уже имеющееся значение после пробела
+            else if(p.first == 'k') {  // добавление в уже имеющееся значение после пробела
                 if(p.second == '\0') {
                     if(dict[word].size() == 1 && dict[word][0] == " ") dict[word][0] = meaning;
                     else dict[word].back() += meaning;
                 }
                 else dict[word][max(0, p.second - 49)] += meaning;
             }
-            else if(p.first == 'u') { // удаление последнего слова/выражения после последней запятой у какого-то значения
+            else if(p.first == 'u') {  // удаление последнего слова/выражения после последней запятой у какого-то значения
                 int k;
                 if(p.second == '\0') k = dict[word].size() - 1;
                 else k = p.second - 49;
@@ -981,7 +982,7 @@ void Dictionary::AddSomeMeanings(string word)
                     dict[word][k] = s;
                 }
             }
-            else if((p.first == 'f') && isdigit(p.second)) { // добавление нового значения
+            else if((p.first == 'f') && isdigit(p.second)) {  // добавление нового значения
                 int k = max(min((int) dict[word].size(), p.second - 49), 0);
                 if(k == dict[word].size()) {
                     if(dict[word].size() == 1 && dict[word][0] == " ") dict[word][0] = meaning;
@@ -995,7 +996,7 @@ void Dictionary::AddSomeMeanings(string word)
                     dict[word] = new_meaning;
                 }
             }
-            else if(p.first == 'g') { // замена слова
+            else if(p.first == 'g') {  // замена слова
                 meaning.erase(0, 1);
                 for(int i = 0; i < meaning.size(); ++i)
                     if(meaning[i] == ' ') meaning[i] = '_';
@@ -1011,12 +1012,14 @@ void Dictionary::AddSomeMeanings(string word)
                         last_word.push(word);
                     }
                 }
+                else cout << '\a';
             }
             else if(p.first != 'b') {
                 if(dict[word].size() == 1 && dict[word][0] == " ") dict[word][0] = meaning;
                 else dict[word].push_back(meaning);
             }
         }
+
         if(word != oldWord || dict[word] != oldMeaning) {
             vector<string> dictionaries = folderInfo.GetAllPathsInSingleContainer();
             map<string, vector<string>> workbook;
@@ -1030,6 +1033,7 @@ void Dictionary::AddSomeMeanings(string word)
                 }
             }
         }
+
         if(!cursorIsVisible) {
             structCursorInfo.bVisible = FALSE;
             SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &structCursorInfo);
@@ -1039,7 +1043,7 @@ void Dictionary::AddSomeMeanings(string word)
 
 void Dictionary::FindAWord(bool findAmongAll)
 {
-    vector<bool> lettersEntered; // 1 - english, 0 - russian
+    vector<bool> lettersEntered;  // 1 - english, 0 - russian
     char c[2];
     while(cin.peek() == ' ') cin.ignore();
     string word = "";
@@ -1049,24 +1053,12 @@ void Dictionary::FindAWord(bool findAmongAll)
         for(int i = 0; i < word.size(); ++i) {
             c[0] = word[i];
             OemToCharA(c, c);
-            if(!isalpha(c[0])) {
-                if(lettersEntered.size()) {
-                    lettersEntered.push_back(lettersEntered.back());
-                    if(lettersEntered.back() && word[i] == ' ') word[i] = '_';
-                    else word[i] = c[0];
-                }
+            if(isalpha(c[0])) {
+                if(word[i] == c[0]) lettersEntered.push_back(1);
                 else {
-                    if(word[i] == ' ') word[i] = '_';
-                    else word[i] = c[0];
-                    lettersEntered.push_back(1);
+                    lettersEntered.push_back(0);
+                    word[i] = c[0];
                 }
-            }
-            if(word[i] == c[0]) {
-                lettersEntered.push_back(1);
-            }
-            else {
-                lettersEntered.push_back(0);
-                word[i] = c[0];
             }
         }
     }
@@ -1095,8 +1087,8 @@ void Dictionary::FindAWord(bool findAmongAll)
     cin.sync();
     while(1) {
         sym = _getch();
-        if(sym == 13 || sym == 27) return; // enter || escape
-        if(sym == 9) { // tab
+        if(sym == 13 || sym == 27) return;  // enter || escape
+        if(sym == 9) {  // tab
             if(foundWords.size()) {
                 int wordNo = 0;
                 if(isdigit(inputBuffer) && inputBuffer != '0') {
@@ -1115,28 +1107,19 @@ void Dictionary::FindAWord(bool findAmongAll)
         inputBuffer = sym;
         if(isdigit(inputBuffer)) continue;
 
-        if(sym == 8) { // backspace
+        if(sym == 8) {  // backspace
             if(word.size()) {
+                if(isalpha(word.back())) lettersEntered.pop_back();
                 word.pop_back();
-                lettersEntered.pop_back();
             }
         }
-        else if(sym == 127) { // ctrl + backspace
+        else if(sym == 127) {  // ctrl + backspace
             if(word == "") continue;
-            while(word.back() == '_' || word.back() == ' ') {
-                word.pop_back();
-                lettersEntered.pop_back();
-            }
-            if(word.find('_') != string::npos) {
-                while(word.back() != '_') {
+            if(word.back() == '_' || word.back() == ' ') word.pop_back();
+            if(word.find('_') != string::npos || word.find(' ') != string::npos) {
+                while(word.back() != '_' && word.back() != ' ') {
+                    if(isalpha(word.back())) lettersEntered.pop_back();
                     word.pop_back();
-                    lettersEntered.pop_back();
-                }
-            }
-            else if(word.find(' ') != string::npos) {
-                while(word.back() != ' ') {
-                    word.pop_back();
-                    lettersEntered.pop_back();
                 }
             }
             else {
@@ -1144,11 +1127,11 @@ void Dictionary::FindAWord(bool findAmongAll)
                 lettersEntered.clear();
             }
         }
-        else if(sym == 32 && word.size() && (word.back() == ' ' || word.back() == '_')) continue; // второй пробел подряд не печатаем
+        else if(sym == 32 && word.size() && (word.back() == ' ' || word.back() == '_')) continue;  // второй пробел подряд не печатаем
         else if((sym == -32 || sym == -16) && _kbhit()) {
             sym = _getch();
             if(!word.size()) continue;
-            if(sym == 72) { // стрелка вверх
+            if(sym == 72) {  // стрелка вверх
                 if(!up) {
                     up = 1;
                     coord.Y = max(0, coord.Y - height + 1);
@@ -1157,7 +1140,7 @@ void Dictionary::FindAWord(bool findAmongAll)
                 while(getChar(leftX + 1, coord.Y) == ' ' && coord.Y);
                 setPosition(coord);
             }
-            else if(sym == 80) { // стрелка вниз
+            else if(sym == 80) {  // стрелка вниз
                 if(up) {
                     up = 0;
                     coord.Y = min(downY, coord.Y + height - 1);
@@ -1166,7 +1149,7 @@ void Dictionary::FindAWord(bool findAmongAll)
                 while(getChar(leftX + 1, coord.Y + 1) == ' ' && coord.Y != downY);
                 setPosition(coord);
             }
-            else if(sym == 73 || sym == -115) { // PgUp || Ctrl + Up
+            else if(sym == 73 || sym == -115) {  // PgUp || Ctrl + Up
                 if(!up) {
                     up = 1;
                     coord.Y = max(0, coord.Y - height + 1);
@@ -1175,7 +1158,7 @@ void Dictionary::FindAWord(bool findAmongAll)
                 if(coord.Y) while(getChar(leftX + 1, coord.Y) == ' ') coord.Y += 1;
                 setPosition(coord);
             }
-            else if(sym == 81 || sym == -111) { // PgDn || Ctrl + down
+            else if(sym == 81 || sym == -111) {  // PgDn || Ctrl + down
                 if(up) {
                     up = 0;
                     coord.Y = min(downY, coord.Y + height - 1);
@@ -1189,23 +1172,11 @@ void Dictionary::FindAWord(bool findAmongAll)
         else {
             c[0] = sym;
             OemToCharA(c, c);
-            if(!isalpha(c[0])) {
-                if(lettersEntered.size()) {
-                    lettersEntered.push_back(lettersEntered.back());
-                    if(lettersEntered.back() && sym == ' ') word += '_';
-                    else word += c[0];
-                }
-                else {
-                    if(sym == ' ') word = "_";
-                    else word = c[0];
-                    lettersEntered.push_back(1);
-                }
-            }
-            else {
+            if(isalpha(c[0])) {
                 if(sym == c[0]) lettersEntered.push_back(1);
                 else lettersEntered.push_back(0);
-                word += c[0];
             }
+            word += c[0];
             up = 1;
         }
         firstTime:
@@ -1213,7 +1184,7 @@ void Dictionary::FindAWord(bool findAmongAll)
         if(findAmongAll || file == "Dictionaries/all.txt") setColor(PURPLE);
         else setColor(GRAY);
         cout << "\n\tInput: ";
-        if(!word.size()) continue;
+        if(word == "") continue;
         string wordToShow = word;
         for(int i = 0; i < wordToShow.size(); ++i)
             if(wordToShow[i] == '_') wordToShow[i] = ' ';
@@ -1224,29 +1195,9 @@ void Dictionary::FindAWord(bool findAmongAll)
         cout << "\n";
 
         foundWords.clear();
-        if(count(lettersEntered.begin(), lettersEntered.end(), 1) == lettersEntered.size()) { // english
-            for(auto it = dictToSearchIn.begin(); it != dictToSearchIn.end(); ++it) {
-                if(_kbhit()) continue;
-                string temp = it->first;
-                if(temp.find(word) == 0) {
-                    PrintAWord(temp, 0, "", SEA_WAVE, findAmongAll);
-                    no_words = 0;
-                    foundWords.push_back(temp);
-                }
-                else if(temp.find(word) < (1<<30)) no_words = 0;
-            }
-            if(!no_words) cout << "\n\n\t------------------------------------------\n";
-            for(auto it = dictToSearchIn.begin(); it != dictToSearchIn.end(); ++it) {
-                if(_kbhit()) continue;
-                string temp = it->first;
-                if(temp.find(word) != string::npos && temp.find(word)) {
-                    PrintAWord(temp, 0, word, GRAY, findAmongAll);
-                    no_words = 0;
-                    foundWords.push_back(temp);
-                }
-            }
-        }
-        else if(count(lettersEntered.begin(), lettersEntered.end(), 0) == lettersEntered.size()) { // russian
+        if(count(lettersEntered.begin(), lettersEntered.end(), 0) == lettersEntered.size() &&
+        !(word.size() == 1 && (word[0] == ' ' || word[0] == '_' || word[0] == '-'))) {  // russian
+            for(int i = 0; i < word.size(); ++i) if(word[i] == '_') word[i] = ' ';
             for(auto it = dictToSearchIn.begin(); it != dictToSearchIn.end(); ++it) {
                 if(_kbhit()) continue;
                 vector<string> meaning = it->second;
@@ -1309,6 +1260,30 @@ void Dictionary::FindAWord(bool findAmongAll)
                 }
             }
             setColor(WHITE);
+        }
+        else if(count(lettersEntered.begin(), lettersEntered.end(), 1) == lettersEntered.size()) {  // english
+            for(int i = 0; i < word.size(); ++i) if(word[i] == ' ') word[i] = '_';
+            for(auto it = dictToSearchIn.begin(); it != dictToSearchIn.end(); ++it) {
+                if(_kbhit()) continue;
+                string temp = it->first;
+                if(temp.find(word) == 0) {
+                    PrintAWord(temp, 0, "", SEA_WAVE, findAmongAll);
+                    no_words = 0;
+                    foundWords.push_back(temp);
+                }
+                else if(temp.find(word) != string::npos) no_words = 0;
+            }
+            if(!no_words) {
+                cout << "\n\n\t------------------------------------------\n";
+                for(auto it = dictToSearchIn.begin(); it != dictToSearchIn.end(); ++it) {
+                    if(_kbhit()) continue;
+                    string temp = it->first;
+                    if(temp.find(word) != string::npos && temp.find(word)) {
+                        PrintAWord(temp, 0, word, GRAY, findAmongAll);
+                        foundWords.push_back(temp);
+                    }
+                }
+            }
         }
         else {
             cout << "\n\tMust be only one language";
@@ -1677,7 +1652,7 @@ int Dictionary::Determine(string word)
     setColor(GREEN);
     cout << "\n\tFound in: (for " << (double) (finishTime - startTime) / CLOCKS_PER_SEC << "s)";
     setColor(WHITE);
-    int index = 0, longestDictSize = 0; // длина числа количества слов в словаре (5 -> 1, 12 -> 2, 143 -> 3)
+    int index = 0, longestDictSize = 0;  // длина числа количества слов в словаре (5 -> 1, 12 -> 2, 143 -> 3)
     for(auto it = found.begin(); it != found.end(); ++it) longestDictSize = max(longestDictSize, numLength(it->second));
     for(auto it = found.begin(); it != found.end(); ++it) {
         cout << "\n\t\"" << it->first << "\" ";
@@ -1745,7 +1720,7 @@ void Dictionary::FoldersHandler()
     bool needInstructions = 1;
     string command = "";
     while(1) {
-        if(choice.substr(0, 6) == "create") { // создает папку
+        if(choice.substr(0, 6) == "create") {  // создает папку
             if(choice == "create") {
                 command = choice;
                 goto thatsall;
@@ -1779,7 +1754,7 @@ void Dictionary::FoldersHandler()
                 cout << " was created\n\n";
             }
         }
-        else if(choice.substr(0, 6) == "delete") { // удаляет папку (словари в ней перемещаются в общую область видимости)
+        else if(choice.substr(0, 6) == "delete") {  // удаляет папку (словари в ней перемещаются в общую область видимости)
             if(choice == "delete") {
                 command = choice;
                 goto thatsall;
@@ -1886,7 +1861,7 @@ void Dictionary::FoldersHandler()
                 cout << " was successfully deleted\n\n";
             }
         }
-        else if(choice.substr(0, 6) == "add to") { // добавляет текущий словарь во введенную папку
+        else if(choice.substr(0, 6) == "add to") {  // добавляет текущий словарь во введенную папку
             if(choice == "add to") {
                 command = choice;
                 goto thatsall;
@@ -1916,15 +1891,15 @@ void Dictionary::FoldersHandler()
                 goto thatsall;
             }
             folderInfo.DeleteFile(file);
-            folderName += file.substr(file.rfind("/")); // "Dictionaries/papka__test/film.txt"
+            folderName += file.substr(file.rfind("/"));  // "Dictionaries/papka__test/film.txt"
             rename(file.c_str(), folderName.c_str());
             if(folderInfo.MovieIsExcluded(file)) {
                 folderInfo.RemoveFromExcluded(file);
                 folderInfo.AddToExcluded(folderName);
             }
             file = folderName;
-            folderName = folderName.substr(13); // "papka__test/<file>.txt"
-            folderName.erase(folderName.size() - 4); // "papka__test/<file>"
+            folderName = folderName.substr(13);  // "papka__test/<file>.txt"
+            folderName.erase(folderName.size() - 4);  // "papka__test/<file>"
             Dictionary *temp = new Dictionary(folderName);
             folder = temp->folder;
             innerAll_file = temp->innerAll_file;
@@ -1953,7 +1928,7 @@ void Dictionary::FoldersHandler()
                 cout << " folder\n\n";
             }
         }
-        else if(choice.substr(0, 6) == "remove") { // перемещаем текущий словарь из папки в общую область видимости
+        else if(choice.substr(0, 6) == "remove") {  // перемещаем текущий словарь из папки в общую область видимости
             needInstructions = 0;
             if(folder == "" || file.substr(13) == folder + "all.txt") {
                 if(!out) {
@@ -2000,7 +1975,7 @@ void Dictionary::FoldersHandler()
                     }
                     goto thatsall;
                 }
-                int star = -1; // индекс папки, которая открыта в данный момент
+                int star = -1;  // индекс папки, которая открыта в данный момент
                 pathToDemonstration(folder);
                 for(int i = 0; i < existingFolders.size(); ++i) {
                     if("papka  " + existingFolders[i] + "/" == folder) {
@@ -2055,7 +2030,7 @@ void Dictionary::FoldersHandler()
             vector<string> filesInFolder = folderInfo.GetFilesFromFolder(folderName);
             vector<int>    theirNameSizes;
             vector<int>    dictSizes;
-            vector<int>    dictSizesNumLength; // количества цифр в числе размера словаря (напр. 375 -> 3)
+            vector<int>    dictSizesNumLength;  // количества цифр в числе размера словаря (напр. 375 -> 3)
             for(const auto& fileName : filesInFolder) {
                 string fileName_path = fileName + ".txt";
                 demonstrationToPath(fileName_path);
