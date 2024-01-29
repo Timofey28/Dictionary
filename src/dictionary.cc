@@ -289,6 +289,8 @@ pair<char, char> Dictionary::EnterWord(string& meaning, bool isAdding)
                 return {'k', input[1]};
             if((input[0] == 'u' || input[0] == 'г') && (input[1] == '\0' || isdigit(input[1])))
                 return {'u', input[1]};
+            if((input[0] == 'i' || input[0] == 'ш') && (input[1] == '\0' || isdigit(input[1])))
+                return {'i', input[1]};
             if((input[0] == 'z' || input[0] == 'я') && (input[1] == '\0' || isdigit(input[1])))
                 return {'z', input[1]};
             if((input[0] == 'd' || input[0] == 'в') && (input[1] == '\0' || isdigit(input[1])))
@@ -981,6 +983,18 @@ void Dictionary::AddSomeMeanings(string word)
                     s.erase(s.rfind(","));
                     dict[word][k] = s;
                 }
+            }
+            else if(p.first == 'i') {  // удаление последнего слова после последнего пробела у какого-то значения
+                int k;
+                if(p.second == '\0') k = dict[word].size() - 1;
+                else k = p.second - 49;
+                k = min(k, (int) dict[word].size() - 1);
+                string s = dict[word][k];
+                int spaceIndex = s.rfind(" ");
+                if(spaceIndex != string::npos && spaceIndex != 0) s.erase(spaceIndex);
+                assert(s != "" && s != " ");
+                if(s.back() == ',') s.pop_back();
+                dict[word][k] = s;
             }
             else if((p.first == 'f') && isdigit(p.second)) {  // добавление нового значения
                 int k = max(min((int) dict[word].size(), p.second - 49), 0);
