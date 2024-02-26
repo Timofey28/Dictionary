@@ -1064,7 +1064,7 @@ void Dictionary::AddSomeMeanings(string word)
                 }
                 else cout << '\a';
             }
-            else if(p.first == 'q') {
+            else if(p.first == 'q') {  // на предыдущее состояние
                 if(currentHistoryIndex) {
                     currentHistoryIndex--;
                     if(word != wordHistory[currentHistoryIndex]) {
@@ -1075,7 +1075,7 @@ void Dictionary::AddSomeMeanings(string word)
                 }
                 else cout << '\a';
             }
-            else if(p.first == 'w') {
+            else if(p.first == 'w') {  // на следующее состояние
                 if(currentHistoryIndex < wordHistory.size() - 1) {
                     currentHistoryIndex++;
                     if(word != wordHistory[currentHistoryIndex]) {

@@ -12,7 +12,7 @@ class FolderInfo
     // в конце названия каждой папки пробел, чтобы можно было иметь папки и файлы с одинаковыми названиями
     std::map<std::string, std::vector<std::string>> elements;
     std::map<std::string, std::set<std::string>> ordinaryFilesOrder;  // только в папках
-    std::map<std::string, std::array<std::multimap<int, std::string, std::greater<int>>, 2>> dateFilesOrder;  // тоже для папок
+    std::map<std::string, std::array<std::multimap<int, std::string, std::less<int>>, 2>> dateFilesOrder;  // тоже для папок
     std::set<std::string> excluded;
 
     void CheckFolderAndTechFilesExistence();
@@ -20,7 +20,7 @@ class FolderInfo
     std::string TransformPathIntoMovieTitle(std::string path, bool isSurelyAFolder = 0);
     bool IsDateWithYear(const std::string& title, int& correspondingValue);
     bool IsDateWithoutYear(const std::string& title, int& correspondingValue);
-    void SortSameValues(std::multimap<int, std::string, std::greater<int>>& mm, int value);
+    void SortSameValues(std::multimap<int, std::string, std::less<int>>& mm, int value);
     void ReadExcluded();
     void WriteExcluded();
 

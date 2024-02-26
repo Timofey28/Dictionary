@@ -346,7 +346,7 @@ string FolderInfo::TransformPathIntoMovieTitle(string path, bool isSurelyAFolder
     return path;
 }
 
-void FolderInfo::SortSameValues(multimap<int, string, greater<int>>& mm, int value)
+void FolderInfo::SortSameValues(multimap<int, string, less<int>>& mm, int value)
 {
     set<string> dateTitles;
     while(1) {
