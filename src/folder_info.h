@@ -1,4 +1,8 @@
 #pragma once
+#include <array>
+#include <dirent.h>
+#include <cassert>
+#include <map>
 #include "utils.h"
 
 std::map<char, char> path2title, title2path = {

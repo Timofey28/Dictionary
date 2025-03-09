@@ -1,3 +1,4 @@
+
 #include "dictionary.h"
 #include "folder_info.h"
 #include <iomanip>
@@ -1540,7 +1541,7 @@ void Dictionary::Exam()
             PrintAWord(temp, spaces_amount);
             cout << "\n\n\t";
             choice = _getche();
-            if(choice == 'f' || choice == ' ') right_ans++;
+            if(choice == 'f' || choice == ' ') right_ans++;
             continue;
         }
         else if(answer == "exit" || answer == "учше") return;

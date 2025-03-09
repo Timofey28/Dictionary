@@ -1,6 +1,4 @@
 #include "folder_info.h"
-#include <dirent.h>
-#include <cassert>
 using namespace std;
 
 FolderInfo::FolderInfo()
@@ -20,6 +18,7 @@ FolderInfo::FolderInfo()
     int correspondingValue;
     while((entry = readdir(dir)) != nullptr) {
         currentFile = entry->d_name;
+        cout << currentFile << "\n";
         if(currentFile == "." || currentFile == ".." || currentFile == "__excluded__.txt") continue;
 
         if(currentFile.substr(0, 7) == "papka__") {
